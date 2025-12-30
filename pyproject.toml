@@ -38,6 +38,7 @@ dependencies = [
     "ipykernel>=6.0.0",
     "pydantic>=2.0.0",
     "pydantic-settings>=2.0.0",
+    "python-dotenv>=1.0.0",
     # Data Science
     "numpy>=1.24.0",
     "pandas>=2.0.0",

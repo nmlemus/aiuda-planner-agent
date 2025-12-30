@@ -9,49 +9,61 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 from pydantic import BaseModel, Field
-from pydantic_settings import BaseSettings
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class AgentConfig(BaseSettings):
     """Configuration for the Planner Agent.
 
+    Configuration priority (highest to lowest):
+        1. Explicit parameters passed to PlannerAgent()
+        2. Environment variables
+        3. .env file
+        4. Default values
+
     Model format examples (LiteLLM):
-        - OpenAI: "gpt-4o", "gpt-4o-mini", "gpt-5"
+        - OpenAI: "gpt-4o", "gpt-4o-mini"
         - Anthropic: "claude-3-5-sonnet-20241022", "claude-3-opus-20240229"
         - Google: "gemini/gemini-pro", "gemini/gemini-1.5-pro"
         - Local: "ollama/llama2", "ollama/mistral"
+        - LM Studio: "openai/model-name" (with LLM_API_BASE)
         - Azure: "azure/gpt-4"
     """
 
-    # Model configuration
+    model_config = SettingsConfigDict(
+        env_file=".env",
+        env_file_encoding="utf-8",
+        extra="ignore",
+    )
+
+    # Model configuration - checks multiple env var names for compatibility
     model: str = Field(
-        default_factory=lambda: os.getenv("LLM_MODEL", os.getenv("OPENAI_MODEL", "gpt-4o-mini"))
+        default="gpt-4o",
+        validation_alias="LLM_MODEL",
     )
     api_key: str = Field(
-        default_factory=lambda: os.getenv("LLM_API_KEY", os.getenv("OPENAI_API_KEY", ""))
+        default="",
+        validation_alias="LLM_API_KEY",
     )
     api_base: str = Field(
-        default_factory=lambda: os.getenv("LLM_API_BASE", os.getenv("OPENAI_API_BASE", ""))
+        default="",
+        validation_alias="LLM_API_BASE",
     )
 
     # Generation parameters
-    temperature: float = 0.3
-    max_tokens: int = 4096
-    max_rounds: int = 30
+    temperature: float = Field(default=0.3, validation_alias="AIUDA_TEMPERATURE")
+    max_tokens: int = Field(default=4096, validation_alias="AIUDA_MAX_TOKENS")
+    max_rounds: int = Field(default=30, validation_alias="AIUDA_MAX_ROUNDS")
 
     # Execution settings
-    code_timeout: int = 300  # 5 minutes
-    workspace: str = "./agent_workspace"
+    code_timeout: int = Field(default=300, validation_alias="AIUDA_CODE_TIMEOUT")
+    workspace: str = Field(default="./workspace", validation_alias="AIUDA_WORKSPACE")
 
     # Session management (for multi-user)
     session_id: Optional[str] = None
 
     # Stop sequences for tag-based protocol
     stop_sequences: List[str] = Field(default_factory=lambda: ["</code>", "</answer>"])
-
-    class Config:
-        env_prefix = "AIUDA_"
-        extra = "ignore"
 
     @property
     def workspace_path(self) -> Path:

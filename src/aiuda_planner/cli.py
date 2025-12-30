@@ -7,6 +7,11 @@ import sys
 import shutil
 from pathlib import Path
 
+# Load .env file if exists (before importing agent)
+from dotenv import load_dotenv
+load_dotenv()  # Loads from .env in current directory
+load_dotenv(Path.home() / ".aiuda" / ".env")  # Also check ~/.aiuda/.env
+
 from aiuda_planner import PlannerAgent, EventType
 
 
