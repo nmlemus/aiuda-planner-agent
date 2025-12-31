@@ -4,9 +4,9 @@ import pytest
 import json
 from pathlib import Path
 
-from aiuda_planner.core.context import RunContext
-from aiuda_planner.utils.notebook import NotebookBuilder, ExecutionTracker
-from aiuda_planner.schema.models import ExecutionResult
+from datapilot.core.context import RunContext
+from datapilot.utils.notebook import NotebookBuilder, ExecutionTracker
+from datapilot.schema.models import ExecutionResult
 
 
 class TestNotebookBuilderWithContext:

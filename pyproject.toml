@@ -3,14 +3,14 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [project]
-name = "aiuda-planner-agent"
+name = "datapilot"
 version = "0.3.0"
-description = "AI Agent with dynamic planning and persistent Jupyter kernel execution"
+description = "AI Agent with dynamic planning and persistent Jupyter kernel execution for data analysis"
 readme = "README.md"
 license = "MIT"
 requires-python = ">=3.10"
 authors = [
-    { name = "AiudaLabs", email = "contact@aiudalabs.com" }
+    { name = "DataPilot Contributors" }
 ]
 keywords = [
     "ai",
@@ -19,17 +19,21 @@ keywords = [
     "jupyter",
     "data-analysis",
     "machine-learning",
-    "planner"
+    "planner",
+    "datapilot",
+    "autonomous-agent"
 ]
 classifiers = [
     "Development Status :: 3 - Alpha",
     "Intended Audience :: Developers",
+    "Intended Audience :: Science/Research",
     "License :: OSI Approved :: MIT License",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "Topic :: Scientific/Engineering :: Information Analysis",
 ]
 dependencies = [
     # Core
@@ -64,15 +68,15 @@ api = [
 ]
 
 [project.scripts]
-aiuda-planner = "aiuda_planner.cli:main"
+datapilot = "datapilot.cli:main"
 
 [project.urls]
-Homepage = "https://github.com/aiudalabs/aiuda-planner-agent"
-Documentation = "https://github.com/aiudalabs/aiuda-planner-agent#readme"
-Repository = "https://github.com/aiudalabs/aiuda-planner-agent"
+Homepage = "https://github.com/nmlemus/datapilot"
+Documentation = "https://github.com/nmlemus/datapilot#readme"
+Repository = "https://github.com/nmlemus/datapilot"
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/aiuda_planner"]
+packages = ["src/datapilot"]
 
 [tool.ruff]
 line-length = 100

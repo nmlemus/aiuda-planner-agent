@@ -16,7 +16,7 @@ if not os.getenv("OPENAI_API_KEY"):
     print("export OPENAI_API_KEY=sk-your-key-here")
     exit(1)
 
-from aiuda_planner import PlannerAgent
+from datapilot import PlannerAgent
 
 
 def main():

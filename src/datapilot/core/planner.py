@@ -5,7 +5,7 @@ from __future__ import annotations
 import re
 from typing import Optional
 
-from aiuda_planner.schema.models import PlanStep, PlanState
+from datapilot.schema.models import PlanStep, PlanState
 
 
 class PlanParser:

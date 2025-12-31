@@ -7,21 +7,21 @@ from typing import Optional, Callable, Any, Generator, TYPE_CHECKING
 
 from litellm import completion
 
-from aiuda_planner.schema.models import (
+from datapilot.schema.models import (
     AgentConfig,
     ExecutionResult,
     EventType,
     AgentEvent,
     PlanState,
 )
-from aiuda_planner.core.planner import PlanParser
-from aiuda_planner.core.executor import JupyterExecutor
-from aiuda_planner.utils.notebook import NotebookBuilder
-from aiuda_planner.utils.logger import AgentLogger, Colors
+from datapilot.core.planner import PlanParser
+from datapilot.core.executor import JupyterExecutor
+from datapilot.utils.notebook import NotebookBuilder
+from datapilot.utils.logger import AgentLogger, Colors
 
 if TYPE_CHECKING:
-    from aiuda_planner.schema.models import Message
-    from aiuda_planner.utils.run_logger import RunLogger
+    from datapilot.schema.models import Message
+    from datapilot.utils.run_logger import RunLogger
 
 
 # System prompt for the planner agent

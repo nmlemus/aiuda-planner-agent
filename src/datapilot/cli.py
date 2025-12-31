@@ -21,8 +21,8 @@ for _env_path in _env_locations:
         load_dotenv(_env_path)
         break
 
-from aiuda_planner import PlannerAgent, EventType
-from aiuda_planner.core.context import RunContext
+from datapilot import PlannerAgent, EventType
+from datapilot.core.context import RunContext
 
 
 def main():

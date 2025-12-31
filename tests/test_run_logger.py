@@ -4,8 +4,8 @@ import pytest
 import json
 from pathlib import Path
 
-from aiuda_planner.core.context import RunContext
-from aiuda_planner.utils.run_logger import RunLogger
+from datapilot.core.context import RunContext
+from datapilot.utils.run_logger import RunLogger
 
 
 class TestRunLogger:

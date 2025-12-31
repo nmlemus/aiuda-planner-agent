@@ -8,10 +8,10 @@ from typing import Optional, TYPE_CHECKING
 
 from jupyter_client import KernelManager
 
-from aiuda_planner.schema.models import ExecutionResult
+from datapilot.schema.models import ExecutionResult
 
 if TYPE_CHECKING:
-    from aiuda_planner.utils.logger import AgentLogger
+    from datapilot.utils.logger import AgentLogger
 
 
 class JupyterExecutor:

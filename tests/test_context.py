@@ -5,7 +5,7 @@ import tempfile
 import shutil
 from pathlib import Path
 
-from aiuda_planner.core.context import RunContext
+from datapilot.core.context import RunContext
 
 
 class TestRunContext:

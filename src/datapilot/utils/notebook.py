@@ -8,14 +8,14 @@ from datetime import datetime
 from pathlib import Path
 from typing import Dict, List, Optional, Any, TYPE_CHECKING
 
-from aiuda_planner.schema.models import (
+from datapilot.schema.models import (
     ExecutionResult,
     ExecutionRecord,
     PlanState,
 )
 
 if TYPE_CHECKING:
-    from aiuda_planner.core.context import RunContext
+    from datapilot.core.context import RunContext
 
 
 class ExecutionTracker:

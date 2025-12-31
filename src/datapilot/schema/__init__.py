@@ -1,6 +1,6 @@
 """Schema models for the AI Planner Agent."""
 
-from aiuda_planner.schema.models import (
+from datapilot.schema.models import (
     AgentConfig,
     ExecutionResult,
     ExecutionRecord,

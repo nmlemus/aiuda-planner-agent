@@ -1,6 +1,6 @@
-# Aiuda Planner Agent
+# DataPilot
 
-A Python package for building planning-based AI agents for data analysis tasks.
+An AI-powered autonomous agent for data analysis with dynamic planning and persistent Jupyter kernel execution.
 
 ## Features
 
@@ -9,31 +9,32 @@ A Python package for building planning-based AI agents for data analysis tasks.
 - **Multi-Provider LLM**: Supports OpenAI, Anthropic, Google, Ollama via LiteLLM
 - **Notebook Generation**: Automatically generates clean, runnable Jupyter notebooks
 - **Event Streaming**: Real-time events for UI integration
+- **Comprehensive Logging**: Full execution logs for debugging and ML retraining
 - **Session Management**: State persistence for multi-user scenarios
 
 ## Installation
 
-Using uv (recommended):
+Using pip:
 ```bash
-uv pip install aiuda-planner-agent
+pip install datapilot
 ```
 
-Or with FastAPI support:
+With FastAPI support:
 ```bash
-uv pip install "aiuda-planner-agent[api]"
+pip install "datapilot[api]"
+```
+
+Using uv (recommended):
+```bash
+uv pip install datapilot
+uv pip install "datapilot[api]"  # with FastAPI
 ```
 
 For development:
 ```bash
-git clone https://github.com/aiudalabs/aiuda-planner-agent
-cd aiuda-planner-agent
+git clone https://github.com/nmlemus/datapilot
+cd datapilot
 uv sync --all-extras
-```
-
-Using pip (alternative):
-```bash
-pip install aiuda-planner-agent
-pip install "aiuda-planner-agent[api]"  # with FastAPI
 ```
 
 ## Quick Start
@@ -41,7 +42,7 @@ pip install "aiuda-planner-agent[api]"  # with FastAPI
 ### Basic Usage
 
 ```python
-from aiuda_planner import PlannerAgent
+from datapilot import PlannerAgent
 
 # Create agent
 with PlannerAgent(model="gpt-4o", workspace="./workspace") as agent:
@@ -54,7 +55,7 @@ with PlannerAgent(model="gpt-4o", workspace="./workspace") as agent:
 ### With Streaming
 
 ```python
-from aiuda_planner import PlannerAgent, EventType
+from datapilot import PlannerAgent, EventType
 
 agent = PlannerAgent(model="claude-3-sonnet-20240229")
 agent.start()
@@ -82,7 +83,7 @@ agent.shutdown()
 from fastapi import FastAPI
 from fastapi.responses import StreamingResponse
 from uuid import uuid4
-from aiuda_planner import PlannerAgent, EventType
+from datapilot import PlannerAgent, EventType
 
 app = FastAPI()
 
@@ -109,7 +110,7 @@ async def analyze(task: str):
 The package includes a CLI for quick analysis from the terminal:
 
 ```bash
-aiuda-planner "Analyze this dataset and create visualizations" --data ./my_data.csv
+datapilot "Analyze this dataset and create visualizations" --data ./my_data.csv
 ```
 
 ### CLI Options
@@ -119,6 +120,7 @@ aiuda-planner "Analyze this dataset and create visualizations" --data ./my_data.
 | `--data` | `-d` | Path to data file or directory (required) |
 | `--model` | `-m` | LLM model to use (default: gpt-4o) |
 | `--workspace` | `-w` | Output directory (default: ./workspace) |
+| `--run-id` | | Custom run ID for this execution |
 | `--max-rounds` | `-r` | Max iterations (default: 30) |
 | `--quiet` | `-q` | Suppress verbose output |
 | `--no-stream` | | Disable streaming output |
@@ -127,35 +129,46 @@ aiuda-planner "Analyze this dataset and create visualizations" --data ./my_data.
 
 ```bash
 # Basic analysis
-aiuda-planner "Find trends and patterns" -d ./sales.csv
+datapilot "Find trends and patterns" -d ./sales.csv
 
 # With specific model
-aiuda-planner "Build ML model" -d ./dataset -m claude-3-sonnet-20240229
+datapilot "Build ML model" -d ./dataset -m claude-3-sonnet-20240229
 
 # Custom output directory
-aiuda-planner "Create charts" -d ./data -w ./output
+datapilot "Create charts" -d ./data -w ./output
+
+# With custom run ID
+datapilot "Analyze" -d ./data --run-id my-analysis-001
 
 # Quiet mode
-aiuda-planner "Analyze" -d ./data -q
-
-# Using uv
-uv run aiuda-planner "Analyze this dataset" -d ./data
+datapilot "Analyze" -d ./data -q
 ```
 
-### Output
+### Output Structure
 
-The CLI generates:
-- **Notebook**: `workspace/generated/analysis_YYYYMMDD_HHMMSS.ipynb`
-- **Images**: `workspace/images/` (auto-saved charts)
-- **Data**: `workspace/data/` (copy of input data)
+Each run creates an isolated workspace:
+```
+workspace/
+└── runs/
+    └── {run_id}/
+        ├── data/          # Input data (copied)
+        ├── notebooks/     # Generated notebooks
+        ├── artifacts/     # Images, charts, outputs
+        └── logs/
+            ├── run.log        # Human-readable log
+            └── events.jsonl   # Structured events for ML
+```
 
 ## Configuration
 
 ```python
+from datapilot import PlannerAgent, RunContext
+
+# With automatic run isolation
+context = RunContext(workspace="./workspace")
 agent = PlannerAgent(
     model="gpt-4o",           # Any LiteLLM-supported model
-    workspace="./workspace",  # Working directory
-    session_id="user-123",    # For multi-user scenarios
+    context=context,          # Run context for isolation
     max_rounds=30,            # Max agent iterations
     max_tokens=4096,          # Max tokens per response
     temperature=0.2,          # LLM temperature
@@ -178,7 +191,7 @@ Any model supported by [LiteLLM](https://docs.litellm.ai/docs/providers):
 ## Event Types
 
 ```python
-from aiuda_planner import EventType
+from datapilot import EventType
 
 EventType.AGENT_STARTED       # Agent started processing
 EventType.AGENT_FINISHED      # Agent finished
@@ -196,32 +209,22 @@ EventType.ANSWER_ACCEPTED     # Final answer generated
 EventType.ANSWER_REJECTED     # Answer rejected (plan incomplete)
 ```
 
-## State Persistence
-
-```python
-# Save state
-state_json = agent.serialize_state()
-save_to_database(session_id, state_json)
-
-# Restore state
-state_json = load_from_database(session_id)
-agent.restore_state(state_json)
-```
-
 ## Architecture
 
 ```
-aiuda_planner/
+datapilot/
 ├── agents/
 │   └── base.py          # PlannerAgent - main user interface
 ├── core/
+│   ├── context.py       # RunContext - workspace management
 │   ├── engine.py        # AgentEngine - main loop
 │   ├── executor.py      # JupyterExecutor - code execution
 │   └── planner.py       # PlanParser - response parsing
 ├── schema/
 │   └── models.py        # Pydantic models
 └── utils/
-    ├── logger.py        # AgentLogger - logging
+    ├── logger.py        # AgentLogger - console logging
+    ├── run_logger.py    # RunLogger - comprehensive logging
     └── notebook.py      # NotebookBuilder - notebook generation
 ```
 

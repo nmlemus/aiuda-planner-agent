@@ -6,7 +6,7 @@ import logging
 import sys
 from typing import Optional, Callable, Any
 
-from aiuda_planner.schema.models import AgentEvent, EventType
+from datapilot.schema.models import AgentEvent, EventType
 
 
 class Colors:
@@ -88,7 +88,7 @@ class AgentLogger:
 
     def __init__(
         self,
-        name: str = "aiuda_planner",
+        name: str = "datapilot",
         level: int = logging.INFO,
         event_callback: Optional[Callable[[AgentEvent], Any]] = None,
         verbose: bool = True,
