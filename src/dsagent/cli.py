@@ -21,8 +21,51 @@ for _env_path in _env_locations:
         load_dotenv(_env_path)
         break
 
-from dsagent import PlannerAgent, EventType
+from dsagent import PlannerAgent, EventType, HITLMode
 from dsagent.core.context import RunContext
+
+
+def get_hitl_input(prompt: str, options: dict[str, str]) -> str:
+    """Get user input for HITL decisions.
+
+    Args:
+        prompt: The prompt to display
+        options: Dict mapping single char to action name
+
+    Returns:
+        The selected action key
+    """
+    options_str = " / ".join(f"[{k}]{v[1:]}" for k, v in options.items())
+    while True:
+        try:
+            choice = input(f"{prompt}\n{options_str}? > ").strip().lower()
+            if choice in options:
+                return choice
+            print(f"Invalid choice. Please enter one of: {', '.join(options.keys())}")
+        except EOFError:
+            return "a"  # Default to approve if no input available
+
+
+def get_multiline_input(prompt: str) -> str:
+    """Get multiline input from user (end with empty line).
+
+    Args:
+        prompt: The prompt to display
+
+    Returns:
+        The multiline input as a string
+    """
+    print(f"{prompt} (end with empty line):")
+    lines = []
+    while True:
+        try:
+            line = input()
+            if line == "":
+                break
+            lines.append(line)
+        except EOFError:
+            break
+    return "\n".join(lines)
 
 
 def main():
@@ -91,6 +134,14 @@ Examples:
         help="Disable streaming output",
     )
 
+    parser.add_argument(
+        "--hitl",
+        type=str,
+        choices=["none", "plan_only", "on_error", "plan_and_answer", "full"],
+        default="none",
+        help="Human-in-the-Loop mode (default: none)",
+    )
+
     args = parser.parse_args()
 
     # Validate data path
@@ -115,10 +166,15 @@ Examples:
                 shutil.copy2(item, context.data_path / item.name)
         data_info = f"Directory contents from '{data_path.name}' copied to run"
 
+    # Parse HITL mode
+    hitl_mode = HITLMode(args.hitl)
+
     print(f"Run ID: {context.run_id}")
     print(f"Data: {data_info}")
     print(f"Run Path: {context.run_path}")
     print(f"Model: {args.model}")
+    if hitl_mode != HITLMode.NONE:
+        print(f"HITL Mode: {hitl_mode.value}")
     print("-" * 60)
 
     # Build task with data context
@@ -136,6 +192,7 @@ List files in 'data/' first to see what's available.
         max_rounds=args.max_rounds,
         verbose=not args.quiet,
         context=context,
+        hitl=hitl_mode,
     )
 
     try:
@@ -151,7 +208,102 @@ List files in 'data/' first to see what's available.
         else:
             # Streaming mode
             for event in agent.run_stream(task_with_context):
-                if args.quiet:
+                # Handle HITL events
+                if event.type == EventType.HITL_AWAITING_PLAN_APPROVAL:
+                    print("\n" + "=" * 60)
+                    print("PLAN APPROVAL REQUIRED")
+                    print("=" * 60)
+                    if event.plan:
+                        print(event.plan.raw_text)
+                    print("-" * 60)
+                    choice = get_hitl_input(
+                        "Review the plan above",
+                        {"a": "approve", "r": "reject", "m": "modify"}
+                    )
+                    if choice == "a":
+                        agent.approve()
+                    elif choice == "r":
+                        reason = input("Rejection reason (optional): ").strip()
+                        agent.reject(reason or None)
+                    elif choice == "m":
+                        new_plan = get_multiline_input("Enter modified plan")
+                        agent.modify_plan(new_plan)
+
+                elif event.type == EventType.HITL_AWAITING_CODE_APPROVAL:
+                    print("\n" + "=" * 60)
+                    print("CODE APPROVAL REQUIRED")
+                    print("=" * 60)
+                    if event.code:
+                        print(event.code)
+                    print("-" * 60)
+                    choice = get_hitl_input(
+                        "Review the code above",
+                        {"a": "approve", "r": "reject", "m": "modify", "s": "skip"}
+                    )
+                    if choice == "a":
+                        agent.approve()
+                    elif choice == "r":
+                        reason = input("Rejection reason (optional): ").strip()
+                        agent.reject(reason or None)
+                    elif choice == "m":
+                        new_code = get_multiline_input("Enter modified code")
+                        agent.modify_code(new_code)
+                    elif choice == "s":
+                        agent.skip()
+
+                elif event.type == EventType.HITL_AWAITING_ERROR_GUIDANCE:
+                    print("\n" + "=" * 60)
+                    print("ERROR - GUIDANCE REQUIRED")
+                    print("=" * 60)
+                    if event.code:
+                        print("Code:")
+                        print(event.code)
+                    if event.error:
+                        print("\nError:")
+                        print(event.error)
+                    print("-" * 60)
+                    choice = get_hitl_input(
+                        "How should I proceed?",
+                        {"r": "retry", "m": "modify", "s": "skip", "a": "abort", "f": "feedback"}
+                    )
+                    if choice == "r":
+                        agent.approve()  # Retry
+                    elif choice == "m":
+                        new_code = get_multiline_input("Enter modified code")
+                        agent.modify_code(new_code)
+                    elif choice == "s":
+                        agent.skip()
+                    elif choice == "a":
+                        agent.reject("User aborted")
+                    elif choice == "f":
+                        feedback = input("Enter feedback for the agent: ").strip()
+                        agent.send_feedback(feedback)
+
+                elif event.type == EventType.HITL_AWAITING_ANSWER_APPROVAL:
+                    print("\n" + "=" * 60)
+                    print("ANSWER APPROVAL REQUIRED")
+                    print("=" * 60)
+                    if event.message:
+                        print(event.message)
+                    print("-" * 60)
+                    choice = get_hitl_input(
+                        "Accept this answer?",
+                        {"a": "approve", "r": "reject", "f": "feedback"}
+                    )
+                    if choice == "a":
+                        agent.approve()
+                    elif choice == "r":
+                        reason = input("Why is this answer not acceptable? ").strip()
+                        agent.reject(reason or None)
+                    elif choice == "f":
+                        feedback = input("Enter feedback to improve the answer: ").strip()
+                        agent.send_feedback(feedback)
+
+                elif event.type == EventType.HITL_EXECUTION_ABORTED:
+                    print("\n[ABORTED] Execution was aborted by user")
+
+                # Standard event handling
+                elif args.quiet:
                     # In quiet mode, only show key events
                     if event.type == EventType.ROUND_STARTED:
                         print(f"Round {event.message}")
