@@ -1,5 +1,7 @@
 # DSAgent
 
+[![Upload Python Package](https://github.com/nmlemus/dsagent/actions/workflows/python-publish.yml/badge.svg?branch=main)](https://github.com/nmlemus/dsagent/actions/workflows/python-publish.yml)
+
 An AI-powered autonomous agent for data analysis with dynamic planning and persistent Jupyter kernel execution.
 
 ## Features
