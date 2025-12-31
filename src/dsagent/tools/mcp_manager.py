@@ -66,23 +66,23 @@ class MCPManager:
         ```python
         # From YAML config
         manager = MCPManager.from_yaml("~/.dsagent/mcp.yaml")
-        await manager.connect_all()
+        manager.connect_all_sync()  # Synchronous connection
 
         # Get tools for LLM
         tools = manager.get_tools_for_llm()
 
-        # Execute a tool
-        result = await manager.execute_tool("web_search", {"query": "python"})
+        # Execute a tool (synchronous)
+        result = manager.execute_tool_sync("web_search", {"query": "python"})
 
         # Cleanup
-        await manager.disconnect_all()
+        manager.disconnect_all_sync()
         ```
 
     Example YAML config:
         ```yaml
         servers:
           - name: web_search
-            command: ["npx", "-y", "@anthropic/mcp-server-brave-search"]
+            command: ["npx", "-y", "@modelcontextprotocol/server-brave-search"]
             env:
               BRAVE_API_KEY: "${BRAVE_API_KEY}"
         ```
@@ -102,6 +102,8 @@ class MCPManager:
         self.config = config or MCPConfig()
         self._connections: Dict[str, MCPServerConnection] = {}
         self._tools_cache: Dict[str, Dict[str, Any]] = {}
+        self._loop: Optional[asyncio.AbstractEventLoop] = None
+        self._loop_thread: Optional[Any] = None
 
     @classmethod
     def from_yaml(cls, path: Union[str, Path]) -> "MCPManager":
@@ -369,3 +371,99 @@ class MCPManager:
     async def __aexit__(self, exc_type, exc_val, exc_tb) -> None:
         """Async context manager exit."""
         await self.disconnect_all()
+
+    # ==================== Synchronous API ====================
+    # These methods manage a dedicated event loop for MCP operations,
+    # allowing sync code to use async MCP connections without closing the loop.
+
+    def _ensure_loop(self) -> asyncio.AbstractEventLoop:
+        """Ensure we have a running event loop for MCP operations.
+
+        Creates a dedicated event loop running in a background thread
+        that stays alive for the lifetime of the MCPManager.
+
+        Returns:
+            The event loop for MCP operations
+        """
+        if self._loop is None or self._loop.is_closed():
+            import threading
+
+            # Create a new event loop
+            self._loop = asyncio.new_event_loop()
+
+            # Run it in a background thread
+            def run_loop(loop: asyncio.AbstractEventLoop) -> None:
+                asyncio.set_event_loop(loop)
+                loop.run_forever()
+
+            self._loop_thread = threading.Thread(target=run_loop, args=(self._loop,), daemon=True)
+            self._loop_thread.start()
+
+        return self._loop
+
+    def _run_async(self, coro: Any) -> Any:
+        """Run an async coroutine in our dedicated event loop.
+
+        Args:
+            coro: The coroutine to run
+
+        Returns:
+            The result of the coroutine
+        """
+        import concurrent.futures
+
+        loop = self._ensure_loop()
+        future = asyncio.run_coroutine_threadsafe(coro, loop)
+        return future.result(timeout=120)  # 2 minute timeout
+
+    def connect_all_sync(self) -> None:
+        """Connect to all configured MCP servers (synchronous version).
+
+        This creates a dedicated event loop that stays alive for tool execution.
+        """
+        if not MCP_AVAILABLE:
+            raise MCPNotAvailableError(
+                "MCP package not installed. Install with: pip install 'datascience-agent[mcp]'"
+            )
+
+        self._run_async(self.connect_all())
+
+    def disconnect_all_sync(self) -> None:
+        """Disconnect from all MCP servers and cleanup (synchronous version)."""
+        if self._loop and not self._loop.is_closed():
+            # Run disconnect in the event loop
+            try:
+                future = asyncio.run_coroutine_threadsafe(
+                    self.disconnect_all(), self._loop
+                )
+                future.result(timeout=30)
+            except Exception as e:
+                logger.warning(f"Error during disconnect: {e}")
+
+            # Stop the event loop
+            self._loop.call_soon_threadsafe(self._loop.stop)
+
+            # Wait for thread to finish
+            if self._loop_thread and self._loop_thread.is_alive():
+                self._loop_thread.join(timeout=5)
+
+            # Close the loop
+            try:
+                self._loop.close()
+            except Exception:
+                pass
+
+            self._loop = None
+            self._loop_thread = None
+
+    def execute_tool_sync(self, tool_name: str, arguments: Dict[str, Any]) -> str:
+        """Execute a tool synchronously.
+
+        Args:
+            tool_name: Name of the tool to execute
+            arguments: Tool arguments
+
+        Returns:
+            Tool execution result as a string
+        """
+        return self._run_async(self.execute_tool(tool_name, arguments))

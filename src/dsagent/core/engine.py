@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import asyncio
 import json
 import re
 from typing import Optional, Callable, Any, Generator, List, Dict, TYPE_CHECKING
@@ -219,15 +218,8 @@ Use these tools when you need external information (e.g., web search) before wri
             self.logger.print_status("🔧", f"Calling tool: {tool_name}")
 
             try:
-                # Run async tool execution in sync context
-                loop = asyncio.new_event_loop()
-                try:
-                    result = loop.run_until_complete(
-                        self.mcp.execute_tool(tool_name, arguments)
-                    )
-                finally:
-                    loop.close()
-
+                # Use the synchronous API which uses MCPManager's dedicated event loop
+                result = self.mcp.execute_tool_sync(tool_name, arguments)
                 self.logger.print_status("✅", f"Tool {tool_name} completed")
 
             except Exception as e:

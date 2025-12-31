@@ -185,12 +185,8 @@ class PlannerAgent:
                 self.logger.warning(f"Unknown MCP config type: {type(self._mcp_config)}")
                 return
 
-            # Connect to all servers (run async in sync context)
-            loop = asyncio.new_event_loop()
-            try:
-                loop.run_until_complete(self._mcp_manager.connect_all())
-            finally:
-                loop.close()
+            # Connect using the synchronous API (keeps event loop alive for tool calls)
+            self._mcp_manager.connect_all_sync()
 
             if self._mcp_manager.connected_servers:
                 self.logger.info(
@@ -216,14 +212,10 @@ class PlannerAgent:
         if self._run_logger:
             self._run_logger.close()
 
-        # Disconnect MCP servers
+        # Disconnect MCP servers using sync API
         if self._mcp_manager:
             try:
-                loop = asyncio.new_event_loop()
-                try:
-                    loop.run_until_complete(self._mcp_manager.disconnect_all())
-                finally:
-                    loop.close()
+                self._mcp_manager.disconnect_all_sync()
             except Exception as e:
                 self.logger.warning(f"Error disconnecting MCP: {e}")
 
