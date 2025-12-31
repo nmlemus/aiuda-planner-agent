@@ -21,6 +21,7 @@ from aiuda_planner.utils.logger import AgentLogger, Colors
 
 if TYPE_CHECKING:
     from aiuda_planner.schema.models import Message
+    from aiuda_planner.utils.run_logger import RunLogger
 
 
 # System prompt for the planner agent
@@ -125,6 +126,7 @@ class AgentEngine:
         logger: AgentLogger,
         notebook_builder: Optional[NotebookBuilder] = None,
         event_callback: Optional[Callable[[AgentEvent], Any]] = None,
+        run_logger: Optional["RunLogger"] = None,
     ) -> None:
         """Initialize the engine.
 
@@ -134,12 +136,14 @@ class AgentEngine:
             logger: Logger instance
             notebook_builder: Optional notebook builder for tracking
             event_callback: Optional callback for streaming events
+            run_logger: Optional run logger for comprehensive logging
         """
         self.config = config
         self.executor = executor
         self.logger = logger
         self.notebook = notebook_builder
         self.event_callback = event_callback
+        self.run_logger = run_logger
 
         self.messages: list[Message] = []
         self.current_plan: Optional[PlanState] = None
@@ -384,9 +388,34 @@ class AgentEngine:
             # Get LLM response
             yield self._emit(EventType.LLM_CALL_STARTED)
 
+            # Log LLM request
+            if self.run_logger:
+                self.run_logger.log_round_start(self.round_num)
+                prompt = self.messages[-1].get("content", "") if self.messages else ""
+                self.run_logger.log_llm_request(
+                    prompt=prompt,
+                    model=self.config.model,
+                    messages=self.messages,
+                    temperature=self.config.temperature,
+                    max_tokens=self.config.max_tokens,
+                )
+
             try:
+                import time
+                start_time = time.time()
                 response = self._call_llm(self.messages)
+                latency_ms = (time.time() - start_time) * 1000
+
+                # Log LLM response
+                if self.run_logger:
+                    self.run_logger.log_llm_response(
+                        response=response,
+                        latency_ms=latency_ms,
+                        model=self.config.model,
+                    )
             except Exception as e:
+                if self.run_logger:
+                    self.run_logger.log_error(str(e), error_type="llm_error")
                 yield self._emit(EventType.AGENT_ERROR, f"LLM error: {e}")
                 break
 
@@ -408,17 +437,36 @@ class AgentEngine:
                     plan=new_plan,
                 )
 
+                # Log plan update
+                if self.run_logger:
+                    self.run_logger.log_plan_update(
+                        plan_text=new_plan.raw_text,
+                        completed_steps=new_plan.completed_steps,
+                        total_steps=new_plan.total_steps,
+                        reason=plan_update,
+                    )
+
                 if self.logger.verbose:
                     self.logger.print_plan(new_plan.raw_text)
 
             # Log thinking
-            if thinking and self.logger.verbose:
-                self.logger.print_status("💭", f"Thinking: {thinking[:100]}...")
+            if thinking:
+                if self.run_logger:
+                    self.run_logger.log_thinking(thinking)
+                if self.logger.verbose:
+                    self.logger.print_status("💭", f"Thinking: {thinking[:100]}...")
 
             # Check for final answer
             if has_answer:
                 # Validate that plan is complete
                 if self._should_reject_answer(self.current_plan):
+                    # Log rejection
+                    if self.run_logger:
+                        self.run_logger.log_answer(
+                            answer=PlanParser.extract_answer(response) or "",
+                            accepted=False,
+                            rejection_reason="Plan not complete - pending steps remain",
+                        )
                     # Ask agent to continue
                     self.messages.append({"role": "assistant", "content": response})
                     self.messages.append({
@@ -431,6 +479,9 @@ class AgentEngine:
                     continue
 
                 self.answer = PlanParser.extract_answer(response)
+                # Log accepted answer
+                if self.run_logger:
+                    self.run_logger.log_answer(answer=self.answer or "", accepted=True)
                 yield self._emit(EventType.ANSWER_ACCEPTED, self.answer)
                 break
 
@@ -448,7 +499,21 @@ class AgentEngine:
                     if current_step:
                         step_desc = current_step.description
 
+                import time
+                exec_start = time.time()
                 result = self._execute_code(code, step_desc)
+                exec_time_ms = (time.time() - exec_start) * 1000
+
+                # Log code execution
+                if self.run_logger:
+                    self.run_logger.log_code_execution(
+                        code=code,
+                        success=result.success,
+                        output=result.output,
+                        error=result.error,
+                        images_count=len(result.images),
+                        execution_time_ms=exec_time_ms,
+                    )
 
                 if result.success:
                     yield self._emit(
@@ -483,6 +548,10 @@ class AgentEngine:
                     "role": "user",
                     "content": "Please continue with the next step of your plan.",
                 })
+
+            # Log round end
+            if self.run_logger:
+                self.run_logger.log_round_end(self.round_num)
 
             yield self._emit(EventType.ROUND_FINISHED)
 

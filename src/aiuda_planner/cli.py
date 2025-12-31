@@ -22,6 +22,7 @@ for _env_path in _env_locations:
         break
 
 from aiuda_planner import PlannerAgent, EventType
+from aiuda_planner.core.context import RunContext
 
 
 def main():
@@ -65,6 +66,13 @@ Examples:
     )
 
     parser.add_argument(
+        "--run-id",
+        type=str,
+        default=None,
+        help="Optional run ID (auto-generated if not provided)",
+    )
+
+    parser.add_argument(
         "--max-rounds", "-r",
         type=int,
         default=30,
@@ -91,27 +99,25 @@ Examples:
         print(f"Error: Data path does not exist: {data_path}", file=sys.stderr)
         sys.exit(1)
 
-    # Setup workspace
+    # Create run context with isolated workspace
     workspace = Path(args.workspace).resolve()
-    workspace.mkdir(parents=True, exist_ok=True)
+    context = RunContext(workspace=workspace, run_id=args.run_id)
 
-    # Copy data to workspace
-    data_dest = workspace / "data"
-    data_dest.mkdir(exist_ok=True)
-
+    # Copy data to run-specific data directory
     if data_path.is_file():
-        dest_file = data_dest / data_path.name
+        dest_file = context.data_path / data_path.name
         shutil.copy2(data_path, dest_file)
-        data_info = f"File '{data_path.name}' copied to workspace"
+        data_info = f"File '{data_path.name}' copied to run"
     else:
         # Copy directory contents
         for item in data_path.iterdir():
             if item.is_file():
-                shutil.copy2(item, data_dest / item.name)
-        data_info = f"Directory contents from '{data_path.name}' copied to workspace"
+                shutil.copy2(item, context.data_path / item.name)
+        data_info = f"Directory contents from '{data_path.name}' copied to run"
 
+    print(f"Run ID: {context.run_id}")
     print(f"Data: {data_info}")
-    print(f"Workspace: {workspace}")
+    print(f"Run Path: {context.run_path}")
     print(f"Model: {args.model}")
     print("-" * 60)
 
@@ -123,12 +129,13 @@ The data is available in the 'data/' subdirectory of the current working directo
 List files in 'data/' first to see what's available.
 """
 
-    # Create and run agent
+    # Create and run agent with context
     agent = PlannerAgent(
         model=args.model,
-        workspace=workspace,
+        workspace=context.run_path,  # Use run-specific path
         max_rounds=args.max_rounds,
         verbose=not args.quiet,
+        context=context,
     )
 
     try:
@@ -159,9 +166,11 @@ List files in 'data/' first to see what's available.
             result = agent.get_result()
 
         print("\n" + "=" * 60)
+        print(f"Run ID: {context.run_id}")
         print(f"Notebook: {result.notebook_path}")
+        print(f"Artifacts: {context.artifacts_path}")
+        print(f"Logs: {context.logs_path}")
         print(f"Rounds: {result.rounds}")
-        print(f"Images: {workspace / 'images'}")
         print("=" * 60)
 
     except KeyboardInterrupt:
