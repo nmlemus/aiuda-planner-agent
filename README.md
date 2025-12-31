@@ -32,8 +32,8 @@ uv pip install "datascience-agent[api]"  # with FastAPI
 
 For development:
 ```bash
-git clone https://github.com/nmlemus/datapilot
-cd datapilot
+git clone https://github.com/nmlemus/dsagent
+cd dsagent
 uv sync --all-extras
 ```
 

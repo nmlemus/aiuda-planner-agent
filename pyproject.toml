@@ -72,9 +72,9 @@ api = [
 dsagent = "dsagent.cli:main"
 
 [project.urls]
-Homepage = "https://github.com/nmlemus/datapilot"
-Documentation = "https://github.com/nmlemus/datapilot#readme"
-Repository = "https://github.com/nmlemus/datapilot"
+Homepage = "https://github.com/nmlemus/dsagent"
+Documentation = "https://github.com/nmlemus/dsagent#readme"
+Repository = "https://github.com/nmlemus/dsagent"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/dsagent"]
