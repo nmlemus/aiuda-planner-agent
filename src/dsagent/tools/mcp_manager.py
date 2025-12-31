@@ -15,7 +15,7 @@ from dsagent.tools.config import MCPConfig, MCPServerConfig
 try:
     from mcp import ClientSession
     from mcp.client.stdio import stdio_client, StdioServerParameters
-    from mcp.client.streamable_http import streamable_http_client
+    from mcp.client.streamable_http import streamablehttp_client
     from mcp.types import Tool as MCPTool
 
     MCP_AVAILABLE = True
@@ -23,6 +23,7 @@ except ImportError:
     MCP_AVAILABLE = False
     ClientSession = None
     MCPTool = None
+    streamablehttp_client = None  # type: ignore
 
 logger = logging.getLogger(__name__)
 
@@ -225,7 +226,7 @@ class MCPManager:
             raise ValueError(f"No URL specified for HTTP server: {config.name}")
 
         # Create HTTP client context manager
-        http_cm = streamable_http_client(config.url)
+        http_cm = streamablehttp_client(config.url)
         read, write, _ = await http_cm.__aenter__()
         connection._context_managers.append(http_cm)
 
