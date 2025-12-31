@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
-from typing import Optional, Callable, Any, Generator
+from typing import Optional, Callable, Any, Generator, TYPE_CHECKING
 from datetime import datetime
 
 from aiuda_planner.schema.models import (
@@ -18,6 +18,10 @@ from aiuda_planner.core.executor import JupyterExecutor
 from aiuda_planner.core.engine import AgentEngine
 from aiuda_planner.utils.logger import AgentLogger
 from aiuda_planner.utils.notebook import NotebookBuilder
+
+if TYPE_CHECKING:
+    from aiuda_planner.core.context import RunContext
+    from aiuda_planner.utils.run_logger import RunLogger
 
 
 class PlannerAgent:
@@ -69,6 +73,7 @@ class PlannerAgent:
         timeout: int = 300,
         verbose: bool = True,
         event_callback: Optional[Callable[[AgentEvent], Any]] = None,
+        context: Optional["RunContext"] = None,
     ) -> None:
         """Initialize the planner agent.
 
@@ -82,8 +87,14 @@ class PlannerAgent:
             timeout: Code execution timeout in seconds
             verbose: Print to console
             event_callback: Callback for streaming events to UI
+            context: RunContext for organized workspace structure
         """
-        self.workspace = Path(workspace).resolve()
+        # Store or create context
+        self.context = context
+        if context:
+            self.workspace = context.run_path
+        else:
+            self.workspace = Path(workspace).resolve()
         self.workspace.mkdir(parents=True, exist_ok=True)
 
         # Create configuration
@@ -95,6 +106,12 @@ class PlannerAgent:
             temperature=temperature,
             workspace=str(self.workspace),
         )
+
+        # Initialize run logger if context provided
+        self._run_logger: Optional["RunLogger"] = None
+        if context:
+            from aiuda_planner.utils.run_logger import RunLogger
+            self._run_logger = RunLogger(context)
 
         # Initialize components
         self.executor = JupyterExecutor(
@@ -128,6 +145,10 @@ class PlannerAgent:
         """Shutdown the agent (stops Jupyter kernel)."""
         if not self._started:
             return
+
+        # Close run logger if present
+        if self._run_logger:
+            self._run_logger.close()
 
         self.executor.shutdown()
         self._started = False
@@ -168,19 +189,21 @@ class PlannerAgent:
         if not self._started:
             self.start()
 
-        # Initialize notebook builder
+        # Initialize notebook builder with context if available
         self._notebook = NotebookBuilder(
             task=task,
             workspace=self.workspace,
+            context=self.context,
         )
 
-        # Create engine
+        # Create engine with run logger if available
         self._engine = AgentEngine(
             config=self.config,
             executor=self.executor,
             logger=self.logger,
             notebook_builder=self._notebook,
             event_callback=self.event_callback,
+            run_logger=self._run_logger,
         )
 
         # Run the agent loop

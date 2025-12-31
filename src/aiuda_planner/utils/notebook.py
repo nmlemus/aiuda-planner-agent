@@ -6,13 +6,16 @@ import json
 import re
 from datetime import datetime
 from pathlib import Path
-from typing import Dict, List, Optional, Any
+from typing import Dict, List, Optional, Any, TYPE_CHECKING
 
 from aiuda_planner.schema.models import (
     ExecutionResult,
     ExecutionRecord,
     PlanState,
 )
+
+if TYPE_CHECKING:
+    from aiuda_planner.core.context import RunContext
 
 
 class ExecutionTracker:
@@ -180,6 +183,11 @@ class NotebookBuilder:
     2. Clean generation: Generate a polished notebook at the end
 
     Example:
+        # With RunContext (new way)
+        context = RunContext(workspace="./workspace")
+        builder = NotebookBuilder(task="Analyze data", context=context)
+
+        # Legacy (still supported)
         builder = NotebookBuilder(task="Analyze data", workspace="./workspace")
 
         # Track executions
@@ -190,15 +198,32 @@ class NotebookBuilder:
         path = clean.save()
     """
 
-    def __init__(self, task: str, workspace: str | Path) -> None:
+    def __init__(
+        self,
+        task: str,
+        workspace: Optional[str | Path] = None,
+        context: Optional["RunContext"] = None,
+    ) -> None:
         """Initialize the notebook builder.
 
         Args:
             task: The user's task description
-            workspace: Working directory path
+            workspace: Working directory path (legacy, use context instead)
+            context: RunContext for new workspace structure
         """
         self.task = task
-        self.workspace = Path(workspace)
+        self.context = context
+
+        # Determine paths based on context or legacy workspace
+        if context:
+            self.workspace = context.run_path
+            self._notebooks_path = context.notebooks_path
+            self._artifacts_path = context.artifacts_path
+        else:
+            self.workspace = Path(workspace) if workspace else Path("./workspace")
+            self._notebooks_path = self.workspace / "generated"
+            self._artifacts_path = self.workspace / "images"
+
         self.cells: List[Dict[str, Any]] = []
         self.start_time = datetime.now()
         self.execution_count = 0
@@ -264,15 +289,14 @@ class NotebookBuilder:
         )
 
     def _save_images(self, images: list) -> None:
-        """Save images to the workspace/images directory.
+        """Save images to the artifacts directory.
 
         Args:
             images: List of image dicts with 'mime' and 'data' keys
         """
         import base64
 
-        images_dir = self.workspace / "images"
-        images_dir.mkdir(exist_ok=True)
+        self._artifacts_path.mkdir(parents=True, exist_ok=True)
 
         for i, img in enumerate(images):
             mime = img.get("mime", "image/png")
@@ -289,7 +313,7 @@ class NotebookBuilder:
             # Generate filename with timestamp
             timestamp = self.start_time.strftime("%H%M%S")
             filename = f"figure_{timestamp}_{self.execution_count}_{i}{ext}"
-            filepath = images_dir / filename
+            filepath = self._artifacts_path / filename
 
             # Decode and save
             try:
@@ -352,6 +376,9 @@ class NotebookBuilder:
         clean = NotebookBuilder.__new__(NotebookBuilder)
         clean.task = self.task
         clean.workspace = self.workspace
+        clean.context = self.context
+        clean._notebooks_path = self._notebooks_path
+        clean._artifacts_path = self._artifacts_path
         clean.cells = []
         clean.start_time = self.start_time
         clean.execution_count = 0
@@ -437,9 +464,8 @@ class NotebookBuilder:
             "cells": self.cells,
         }
 
-        generated_path = self.workspace / "generated"
-        generated_path.mkdir(parents=True, exist_ok=True)
-        notebook_path = generated_path / filename
+        self._notebooks_path.mkdir(parents=True, exist_ok=True)
+        notebook_path = self._notebooks_path / filename
 
         with open(notebook_path, "w", encoding="utf-8") as f:
             json.dump(notebook, f, indent=2, ensure_ascii=False)

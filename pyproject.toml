@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "aiuda-planner-agent"
-version = "0.2.0"
+version = "0.3.0"
 description = "AI Agent with dynamic planning and persistent Jupyter kernel execution"
 readme = "README.md"
 license = "MIT"

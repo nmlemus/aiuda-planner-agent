@@ -152,7 +152,7 @@ wheels = [
 
 [[package]]
 name = "aiuda-planner-agent"
-version = "0.1.0"
+version = "0.2.0"
 source = { editable = "." }
 dependencies = [
     { name = "ipykernel" },
@@ -165,6 +165,7 @@ dependencies = [
     { name = "pycaret" },
     { name = "pydantic" },
     { name = "pydantic-settings" },
+    { name = "python-dotenv" },
     { name = "scikit-learn" },
     { name = "seaborn" },
     { name = "statsmodels" },
@@ -207,6 +208,7 @@ requires-dist = [
     { name = "pydantic-settings", specifier = ">=2.0.0" },
     { name = "pytest", marker = "extra == 'dev'", specifier = ">=7.0.0" },
     { name = "pytest-asyncio", marker = "extra == 'dev'", specifier = ">=0.21.0" },
+    { name = "python-dotenv", specifier = ">=1.0.0" },
     { name = "ruff", marker = "extra == 'dev'", specifier = ">=0.1.0" },
     { name = "scikit-learn", specifier = ">=1.3.0" },
     { name = "seaborn", specifier = ">=0.12.0" },

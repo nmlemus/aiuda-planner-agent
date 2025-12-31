@@ -36,10 +36,12 @@ from aiuda_planner.schema.models import (
 from aiuda_planner.core.executor import JupyterExecutor
 from aiuda_planner.core.engine import AgentEngine
 from aiuda_planner.core.planner import PlanParser
+from aiuda_planner.core.context import RunContext
 from aiuda_planner.utils.logger import AgentLogger, Colors
 from aiuda_planner.utils.notebook import NotebookBuilder, ExecutionTracker
+from aiuda_planner.utils.run_logger import RunLogger
 
-__version__ = "0.2.0"
+__version__ = "0.3.0"
 
 __all__ = [
     # Main classes
@@ -61,6 +63,9 @@ __all__ = [
     "AgentEngine",
     # Session
     "SessionState",
+    # Context and Logging
+    "RunContext",
+    "RunLogger",
     # Utilities
     "AgentLogger",
     "Colors",
