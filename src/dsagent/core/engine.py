@@ -2,8 +2,10 @@
 
 from __future__ import annotations
 
+import asyncio
+import json
 import re
-from typing import Optional, Callable, Any, Generator, TYPE_CHECKING
+from typing import Optional, Callable, Any, Generator, List, Dict, TYPE_CHECKING
 
 from litellm import completion
 
@@ -26,6 +28,7 @@ from dsagent.utils.logger import AgentLogger, Colors
 if TYPE_CHECKING:
     from dsagent.schema.models import Message
     from dsagent.utils.run_logger import RunLogger
+    from dsagent.tools.mcp_manager import MCPManager
 
 
 # System prompt for the planner agent
@@ -87,6 +90,8 @@ Comprehensive summary of findings, insights, and recommendations.
 ## Available Libraries
 pandas, numpy, matplotlib, seaborn, scikit-learn, scipy, statsmodels, pycaret
 
+{tools_section}
+
 ## Important for Visualizations
 - Always use plt.savefig('filename.png') to save charts to disk
 - Then call plt.show() to display
@@ -132,6 +137,7 @@ class AgentEngine:
         event_callback: Optional[Callable[[AgentEvent], Any]] = None,
         run_logger: Optional["RunLogger"] = None,
         hitl_gateway: Optional[HITLGateway] = None,
+        mcp_manager: Optional["MCPManager"] = None,
     ) -> None:
         """Initialize the engine.
 
@@ -143,6 +149,7 @@ class AgentEngine:
             event_callback: Optional callback for streaming events
             run_logger: Optional run logger for comprehensive logging
             hitl_gateway: Optional HITL gateway for human intervention
+            mcp_manager: Optional MCP manager for external tools
         """
         self.config = config
         self.executor = executor
@@ -151,6 +158,7 @@ class AgentEngine:
         self.event_callback = event_callback
         self.run_logger = run_logger
         self.hitl = hitl_gateway
+        self.mcp = mcp_manager
 
         self.messages: list[Message] = []
         self.current_plan: Optional[PlanState] = None
@@ -169,6 +177,70 @@ class AgentEngine:
         if self.event_callback:
             self.event_callback(event)
         return event
+
+    def _get_system_prompt(self) -> str:
+        """Get the system prompt with tools section if MCP is available."""
+        tools_section = ""
+
+        if self.mcp and self.mcp.available_tools:
+            tools_list = "\n".join(f"- {tool}" for tool in self.mcp.available_tools)
+            tools_section = f"""## Available Tools
+You have access to the following external tools via function calling:
+{tools_list}
+
+Use these tools when you need external information (e.g., web search) before writing code."""
+
+        return SYSTEM_PROMPT.format(tools_section=tools_section)
+
+    def _get_tools_for_llm(self) -> Optional[List[Dict[str, Any]]]:
+        """Get tool definitions for LLM if MCP is available."""
+        if self.mcp and self.mcp.available_tools:
+            return self.mcp.get_tools_for_llm()
+        return None
+
+    def _handle_tool_calls(self, tool_calls: List[Any]) -> List[Dict[str, Any]]:
+        """Execute tool calls and return results.
+
+        Args:
+            tool_calls: List of tool calls from LLM response
+
+        Returns:
+            List of tool result messages
+        """
+        results = []
+
+        for tool_call in tool_calls:
+            tool_name = tool_call.function.name
+            try:
+                arguments = json.loads(tool_call.function.arguments)
+            except json.JSONDecodeError:
+                arguments = {}
+
+            self.logger.print_status("🔧", f"Calling tool: {tool_name}")
+
+            try:
+                # Run async tool execution in sync context
+                loop = asyncio.new_event_loop()
+                try:
+                    result = loop.run_until_complete(
+                        self.mcp.execute_tool(tool_name, arguments)
+                    )
+                finally:
+                    loop.close()
+
+                self.logger.print_status("✅", f"Tool {tool_name} completed")
+
+            except Exception as e:
+                result = f"Error executing tool {tool_name}: {str(e)}"
+                self.logger.print_error(f"Tool error: {result}")
+
+            results.append({
+                "role": "tool",
+                "tool_call_id": tool_call.id,
+                "content": result,
+            })
+
+        return results
 
     def _wait_for_hitl(
         self,
@@ -208,7 +280,7 @@ class AgentEngine:
 
         return feedback
 
-    def _call_llm(self, messages: list[dict]) -> str:
+    def _call_llm(self, messages: list[dict]) -> tuple[str, Optional[List[Any]]]:
         """Call the LLM with automatic fallbacks.
 
         Handles various provider-specific issues:
@@ -220,7 +292,7 @@ class AgentEngine:
             messages: Chat messages
 
         Returns:
-            LLM response text
+            Tuple of (response text, tool_calls or None)
         """
         return self._call_llm_with_fallbacks(
             messages,
@@ -235,7 +307,7 @@ class AgentEngine:
         use_stop: bool = True,
         use_temperature: bool = True,
         use_max_tokens: bool = True,
-    ) -> str:
+    ) -> tuple[str, Optional[List[Any]]]:
         """Call LLM with recursive fallbacks for parameter issues.
 
         Args:
@@ -245,14 +317,19 @@ class AgentEngine:
             use_max_tokens: Whether to use max_tokens (vs max_completion_tokens)
 
         Returns:
-            LLM response text
+            Tuple of (response text, tool_calls or None)
         """
         kwargs: dict[str, Any] = {
             "model": self.config.model,
             "messages": messages,
         }
 
-        if use_stop:
+        # Add tools if available
+        tools = self._get_tools_for_llm()
+        if tools:
+            kwargs["tools"] = tools
+
+        if use_stop and not tools:  # Don't use stop with tools
             kwargs["stop"] = self.STOP_SEQUENCES
         if use_temperature:
             kwargs["temperature"] = self.config.temperature
@@ -263,17 +340,19 @@ class AgentEngine:
 
         try:
             response = completion(**kwargs)
-            content = response.choices[0].message.content or ""
+            message = response.choices[0].message
+            content = message.content or ""
+            tool_calls = getattr(message, "tool_calls", None)
 
             # If stop was disabled, manually truncate at stop sequences
-            if not use_stop:
+            if not use_stop and not tools:
                 for stop_seq in self.STOP_SEQUENCES:
                     if stop_seq in content:
                         idx = content.index(stop_seq)
                         content = content[: idx + len(stop_seq)]
                         break
 
-            return content
+            return content, tool_calls
 
         except Exception as e:
             error_msg = str(e).lower()
@@ -413,9 +492,9 @@ class AgentEngine:
         """
         self._emit(EventType.AGENT_STARTED, f"Starting task: {task}")
 
-        # Initialize messages
+        # Initialize messages with dynamic system prompt
         self.messages = [
-            {"role": "system", "content": SYSTEM_PROMPT},
+            {"role": "system", "content": self._get_system_prompt()},
             {"role": "user", "content": f"Task: {task}"},
         ]
 
@@ -449,8 +528,37 @@ class AgentEngine:
             try:
                 import time
                 start_time = time.time()
-                response = self._call_llm(self.messages)
+                response, tool_calls = self._call_llm(self.messages)
                 latency_ms = (time.time() - start_time) * 1000
+
+                # Handle tool calls if present
+                if tool_calls:
+                    self.logger.print_status("🔧", f"LLM requested {len(tool_calls)} tool(s)")
+
+                    # Add assistant message with tool calls
+                    self.messages.append({
+                        "role": "assistant",
+                        "content": response,
+                        "tool_calls": [
+                            {
+                                "id": tc.id,
+                                "type": "function",
+                                "function": {
+                                    "name": tc.function.name,
+                                    "arguments": tc.function.arguments,
+                                },
+                            }
+                            for tc in tool_calls
+                        ],
+                    })
+
+                    # Execute tools and add results
+                    tool_results = self._handle_tool_calls(tool_calls)
+                    self.messages.extend(tool_results)
+
+                    # Call LLM again with tool results
+                    response, tool_calls = self._call_llm(self.messages)
+                    latency_ms += (time.time() - start_time) * 1000
 
                 # Log LLM response
                 if self.run_logger:

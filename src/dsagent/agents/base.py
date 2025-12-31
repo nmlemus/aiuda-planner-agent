@@ -2,9 +2,10 @@
 
 from __future__ import annotations
 
+import asyncio
 import json
 from pathlib import Path
-from typing import Optional, Callable, Any, Generator, TYPE_CHECKING
+from typing import Optional, Callable, Any, Generator, Dict, Union, TYPE_CHECKING
 from datetime import datetime
 
 from dsagent.schema.models import (
@@ -26,6 +27,8 @@ from dsagent.utils.notebook import NotebookBuilder
 if TYPE_CHECKING:
     from dsagent.core.context import RunContext
     from dsagent.utils.run_logger import RunLogger
+    from dsagent.tools.mcp_manager import MCPManager
+    from dsagent.tools.config import MCPConfig
 
 
 class PlannerAgent:
@@ -80,6 +83,7 @@ class PlannerAgent:
         context: Optional["RunContext"] = None,
         hitl: HITLMode = HITLMode.NONE,
         hitl_timeout: float = 300.0,
+        mcp_config: Optional[Union[str, Path, Dict, "MCPConfig"]] = None,
     ) -> None:
         """Initialize the planner agent.
 
@@ -96,6 +100,7 @@ class PlannerAgent:
             context: RunContext for organized workspace structure
             hitl: Human-in-the-Loop mode (NONE, PLAN_ONLY, ON_ERROR, PLAN_AND_ANSWER, FULL)
             hitl_timeout: Max seconds to wait for human feedback (default 5 min)
+            mcp_config: MCP configuration (path to YAML, dict, or MCPConfig object)
         """
         # Store or create context
         self.context = context
@@ -137,13 +142,17 @@ class PlannerAgent:
         if hitl != HITLMode.NONE:
             self._hitl_gateway = HITLGateway(mode=hitl, timeout=hitl_timeout)
 
+        # Initialize MCP manager if config provided
+        self._mcp_manager: Optional["MCPManager"] = None
+        self._mcp_config = mcp_config
+
         self.event_callback = event_callback
         self._engine: Optional[AgentEngine] = None
         self._notebook: Optional[NotebookBuilder] = None
         self._started = False
 
     def start(self) -> None:
-        """Start the agent (initializes Jupyter kernel).
+        """Start the agent (initializes Jupyter kernel and MCP connections).
 
         Call this before running tasks, or use the context manager.
         """
@@ -151,17 +160,72 @@ class PlannerAgent:
             return
 
         self.executor.start()
+
+        # Initialize MCP manager if config provided
+        if self._mcp_config:
+            self._init_mcp()
+
         self._started = True
         self.logger.info("PlannerAgent started")
 
+    def _init_mcp(self) -> None:
+        """Initialize MCP manager from config."""
+        try:
+            from dsagent.tools.mcp_manager import MCPManager
+            from dsagent.tools.config import MCPConfig
+
+            # Create manager based on config type
+            if isinstance(self._mcp_config, (str, Path)):
+                self._mcp_manager = MCPManager.from_yaml(self._mcp_config)
+            elif isinstance(self._mcp_config, dict):
+                self._mcp_manager = MCPManager.from_dict(self._mcp_config)
+            elif isinstance(self._mcp_config, MCPConfig):
+                self._mcp_manager = MCPManager(self._mcp_config)
+            else:
+                self.logger.warning(f"Unknown MCP config type: {type(self._mcp_config)}")
+                return
+
+            # Connect to all servers (run async in sync context)
+            loop = asyncio.new_event_loop()
+            try:
+                loop.run_until_complete(self._mcp_manager.connect_all())
+            finally:
+                loop.close()
+
+            if self._mcp_manager.connected_servers:
+                self.logger.info(
+                    f"MCP: Connected to {len(self._mcp_manager.connected_servers)} server(s), "
+                    f"{len(self._mcp_manager.available_tools)} tool(s) available"
+                )
+            else:
+                self.logger.warning("MCP: No servers connected")
+
+        except ImportError:
+            self.logger.warning(
+                "MCP package not installed. Install with: pip install 'datascience-agent[mcp]'"
+            )
+        except Exception as e:
+            self.logger.warning(f"Failed to initialize MCP: {e}")
+
     def shutdown(self) -> None:
-        """Shutdown the agent (stops Jupyter kernel)."""
+        """Shutdown the agent (stops Jupyter kernel and MCP connections)."""
         if not self._started:
             return
 
         # Close run logger if present
         if self._run_logger:
             self._run_logger.close()
+
+        # Disconnect MCP servers
+        if self._mcp_manager:
+            try:
+                loop = asyncio.new_event_loop()
+                try:
+                    loop.run_until_complete(self._mcp_manager.disconnect_all())
+                finally:
+                    loop.close()
+            except Exception as e:
+                self.logger.warning(f"Error disconnecting MCP: {e}")
 
         self.executor.shutdown()
         self._started = False
@@ -286,7 +350,7 @@ class PlannerAgent:
             context=self.context,
         )
 
-        # Create engine with run logger and HITL gateway if available
+        # Create engine with run logger, HITL gateway, and MCP manager if available
         self._engine = AgentEngine(
             config=self.config,
             executor=self.executor,
@@ -295,6 +359,7 @@ class PlannerAgent:
             event_callback=self.event_callback,
             run_logger=self._run_logger,
             hitl_gateway=self._hitl_gateway,
+            mcp_manager=self._mcp_manager,
         )
 
         # Run the agent loop

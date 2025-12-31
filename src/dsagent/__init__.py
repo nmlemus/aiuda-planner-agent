@@ -45,6 +45,17 @@ from dsagent.utils.logger import AgentLogger, Colors
 from dsagent.utils.notebook import NotebookBuilder, ExecutionTracker
 from dsagent.utils.run_logger import RunLogger
 
+# Optional MCP imports (requires mcp extra)
+try:
+    from dsagent.tools.mcp_manager import MCPManager
+    from dsagent.tools.config import MCPConfig, MCPServerConfig
+    _MCP_AVAILABLE = True
+except ImportError:
+    MCPManager = None  # type: ignore
+    MCPConfig = None  # type: ignore
+    MCPServerConfig = None  # type: ignore
+    _MCP_AVAILABLE = False
+
 __version__ = "0.4.0"
 
 __all__ = [
@@ -80,4 +91,8 @@ __all__ = [
     "Colors",
     "NotebookBuilder",
     "ExecutionTracker",
+    # MCP Tools (optional)
+    "MCPManager",
+    "MCPConfig",
+    "MCPServerConfig",
 ]
