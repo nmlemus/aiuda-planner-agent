@@ -17,6 +17,7 @@ An AI-powered autonomous agent for data analysis with dynamic planning and persi
 - **Comprehensive Logging**: Full execution logs for debugging and ML retraining
 - **Session Management**: State persistence for multi-user scenarios
 - **Human-in-the-Loop**: Configurable checkpoints for human approval and feedback
+- **MCP Tools Support**: Connect to external tools via Model Context Protocol (web search, databases, etc.)
 
 ## Installation
 
@@ -28,6 +29,11 @@ pip install datascience-agent
 With FastAPI support:
 ```bash
 pip install "datascience-agent[api]"
+```
+
+With MCP tools support:
+```bash
+pip install "datascience-agent[mcp]"
 ```
 
 Using uv (recommended):
@@ -130,6 +136,8 @@ dsagent "Analyze this dataset and create visualizations" --data ./my_data.csv
 | `--max-rounds` | `-r` | Max iterations (default: 30) |
 | `--quiet` | `-q` | Suppress verbose output |
 | `--no-stream` | | Disable streaming output |
+| `--hitl` | | HITL mode: none, plan_only, on_error, plan_and_answer, full |
+| `--mcp-config` | | Path to MCP servers YAML configuration file |
 
 ### CLI Examples
 
@@ -259,6 +267,97 @@ EventType.HITL_PLAN_REJECTED             # Plan was rejected
 EventType.HITL_EXECUTION_ABORTED         # Execution was aborted
 ```
 
+## MCP Tools Support
+
+DSAgent supports the [Model Context Protocol (MCP)](https://modelcontextprotocol.io/) to connect to external tool servers, enabling capabilities like web search, database queries, and more.
+
+### Installation
+
+```bash
+pip install "datascience-agent[mcp]"
+```
+
+### Configuration
+
+Create a YAML configuration file (e.g., `~/.dsagent/mcp.yaml`):
+
+```yaml
+servers:
+  # Brave Search - web search capability
+  - name: brave_search
+    transport: stdio
+    command: ["npx", "-y", "@modelcontextprotocol/server-brave-search"]
+    env:
+      BRAVE_API_KEY: "${BRAVE_API_KEY}"
+
+  # Filesystem access
+  - name: filesystem
+    transport: stdio
+    command: ["npx", "-y", "@modelcontextprotocol/server-filesystem", "/path/to/allowed/dir"]
+
+  # HTTP-based MCP server
+  - name: custom_server
+    transport: http
+    url: "http://localhost:8080/mcp"
+    enabled: false  # Disable without removing
+```
+
+### Usage
+
+#### Python API
+
+```python
+from dsagent import PlannerAgent
+
+agent = PlannerAgent(
+    model="gpt-4o",
+    mcp_config="~/.dsagent/mcp.yaml",  # Path to config
+)
+agent.start()
+
+# Agent can now use web search and other MCP tools
+for event in agent.run_stream("Search for latest AI trends and analyze them"):
+    if event.type == EventType.ANSWER_ACCEPTED:
+        print(event.message)
+
+agent.shutdown()
+```
+
+#### CLI
+
+```bash
+# Set API keys
+export BRAVE_API_KEY="your-brave-api-key"
+
+# Run with MCP tools
+dsagent "Search for Python best practices and summarize" \
+  --data ./data.csv \
+  --mcp-config ~/.dsagent/mcp.yaml
+```
+
+### Environment Variables
+
+Use `${VAR_NAME}` syntax in YAML to reference environment variables:
+
+```yaml
+env:
+  API_KEY: "${MY_API_KEY}"      # Resolved from environment
+  STATIC_VALUE: "hardcoded"     # Static value
+```
+
+### Available MCP Servers
+
+Some popular MCP servers you can use:
+
+| Server | Package | Description |
+|--------|---------|-------------|
+| Brave Search | `@modelcontextprotocol/server-brave-search` | Web search via Brave API |
+| Filesystem | `@modelcontextprotocol/server-filesystem` | File system access |
+| PostgreSQL | `@modelcontextprotocol/server-postgres` | PostgreSQL database queries |
+| Puppeteer | `@modelcontextprotocol/server-puppeteer` | Browser automation |
+
+See [MCP Servers Directory](https://github.com/modelcontextprotocol/servers) for more options.
+
 ## Supported Models
 
 Any model supported by [LiteLLM](https://docs.litellm.ai/docs/providers):
@@ -302,6 +401,9 @@ dsagent/
 │   ├── executor.py      # JupyterExecutor - code execution
 │   ├── hitl.py          # HITLGateway - human-in-the-loop
 │   └── planner.py       # PlanParser - response parsing
+├── tools/
+│   ├── config.py        # MCP configuration models
+│   └── mcp_manager.py   # MCPManager - MCP server connections
 ├── schema/
 │   └── models.py        # Pydantic models
 └── utils/

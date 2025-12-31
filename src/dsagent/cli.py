@@ -79,6 +79,7 @@ Examples:
   dsagent "Build a predictive model" --data ./dataset --model gpt-4o
   dsagent "Create visualizations" --data ./data --workspace ./output
   dsagent "Analyze with approval" --data ./data --hitl plan_only
+  dsagent "Search and analyze" --data ./data --mcp-config ~/.dsagent/mcp.yaml
         """,
     )
 
@@ -143,6 +144,13 @@ Examples:
         help="Human-in-the-Loop mode (default: none)",
     )
 
+    parser.add_argument(
+        "--mcp-config",
+        type=str,
+        default=None,
+        help="Path to MCP servers YAML config file (e.g., ~/.dsagent/mcp.yaml)",
+    )
+
     args = parser.parse_args()
 
     # Validate data path
@@ -170,12 +178,22 @@ Examples:
     # Parse HITL mode
     hitl_mode = HITLMode(args.hitl)
 
+    # Validate MCP config if provided
+    mcp_config_path = None
+    if args.mcp_config:
+        mcp_config_path = Path(args.mcp_config).expanduser().resolve()
+        if not mcp_config_path.exists():
+            print(f"Error: MCP config file not found: {mcp_config_path}", file=sys.stderr)
+            sys.exit(1)
+
     print(f"Run ID: {context.run_id}")
     print(f"Data: {data_info}")
     print(f"Run Path: {context.run_path}")
     print(f"Model: {args.model}")
     if hitl_mode != HITLMode.NONE:
         print(f"HITL Mode: {hitl_mode.value}")
+    if mcp_config_path:
+        print(f"MCP Config: {mcp_config_path}")
     print("-" * 60)
 
     # Build task with data context
@@ -194,6 +212,7 @@ List files in 'data/' first to see what's available.
         verbose=not args.quiet,
         context=context,
         hitl=hitl_mode,
+        mcp_config=mcp_config_path,
     )
 
     try:
