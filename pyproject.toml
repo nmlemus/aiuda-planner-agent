@@ -3,14 +3,14 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [project]
-name = "datapilot"
+name = "datascience-agent"
 version = "0.3.0"
 description = "AI Agent with dynamic planning and persistent Jupyter kernel execution for data analysis"
 readme = "README.md"
 license = "MIT"
 requires-python = ">=3.10"
 authors = [
-    { name = "DataPilot Contributors" }
+    { name = "DSAgent Contributors" }
 ]
 keywords = [
     "ai",
@@ -20,7 +20,8 @@ keywords = [
     "data-analysis",
     "machine-learning",
     "planner",
-    "datapilot",
+    "dsagent",
+    "datascience-agent",
     "autonomous-agent"
 ]
 classifiers = [
@@ -68,7 +69,7 @@ api = [
 ]
 
 [project.scripts]
-datapilot = "datapilot.cli:main"
+dsagent = "dsagent.cli:main"
 
 [project.urls]
 Homepage = "https://github.com/nmlemus/datapilot"
@@ -76,7 +77,7 @@ Documentation = "https://github.com/nmlemus/datapilot#readme"
 Repository = "https://github.com/nmlemus/datapilot"
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/datapilot"]
+packages = ["src/dsagent"]
 
 [tool.ruff]
 line-length = 100

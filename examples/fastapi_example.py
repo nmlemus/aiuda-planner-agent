@@ -26,7 +26,7 @@ from fastapi import FastAPI, HTTPException
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 
-from datapilot import PlannerAgent, EventType
+from dsagent import PlannerAgent, EventType
 
 # Create FastAPI app
 app = FastAPI(

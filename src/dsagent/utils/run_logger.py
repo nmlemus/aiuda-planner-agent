@@ -9,7 +9,7 @@ from pathlib import Path
 from typing import Any, Dict, Optional, TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from datapilot.core.context import RunContext
+    from dsagent.core.context import RunContext
 
 
 class RunLogger:

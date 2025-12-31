@@ -51,13 +51,13 @@ class AgentConfig(BaseSettings):
     )
 
     # Generation parameters
-    temperature: float = Field(default=0.3, validation_alias="DATAPILOT_TEMPERATURE")
-    max_tokens: int = Field(default=4096, validation_alias="DATAPILOT_MAX_TOKENS")
-    max_rounds: int = Field(default=30, validation_alias="DATAPILOT_MAX_ROUNDS")
+    temperature: float = Field(default=0.3, validation_alias="DSAGENT_TEMPERATURE")
+    max_tokens: int = Field(default=4096, validation_alias="DSAGENT_MAX_TOKENS")
+    max_rounds: int = Field(default=30, validation_alias="DSAGENT_MAX_ROUNDS")
 
     # Execution settings
-    code_timeout: int = Field(default=300, validation_alias="DATAPILOT_CODE_TIMEOUT")
-    workspace: str = Field(default="./workspace", validation_alias="DATAPILOT_WORKSPACE")
+    code_timeout: int = Field(default=300, validation_alias="DSAGENT_CODE_TIMEOUT")
+    workspace: str = Field(default="./workspace", validation_alias="DSAGENT_WORKSPACE")
 
     # Session management (for multi-user)
     session_id: Optional[str] = None

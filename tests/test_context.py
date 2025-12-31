@@ -5,7 +5,7 @@ import tempfile
 import shutil
 from pathlib import Path
 
-from datapilot.core.context import RunContext
+from dsagent.core.context import RunContext
 
 
 class TestRunContext:

@@ -7,21 +7,21 @@ from typing import Optional, Callable, Any, Generator, TYPE_CHECKING
 
 from litellm import completion
 
-from datapilot.schema.models import (
+from dsagent.schema.models import (
     AgentConfig,
     ExecutionResult,
     EventType,
     AgentEvent,
     PlanState,
 )
-from datapilot.core.planner import PlanParser
-from datapilot.core.executor import JupyterExecutor
-from datapilot.utils.notebook import NotebookBuilder
-from datapilot.utils.logger import AgentLogger, Colors
+from dsagent.core.planner import PlanParser
+from dsagent.core.executor import JupyterExecutor
+from dsagent.utils.notebook import NotebookBuilder
+from dsagent.utils.logger import AgentLogger, Colors
 
 if TYPE_CHECKING:
-    from datapilot.schema.models import Message
-    from datapilot.utils.run_logger import RunLogger
+    from dsagent.schema.models import Message
+    from dsagent.utils.run_logger import RunLogger
 
 
 # System prompt for the planner agent

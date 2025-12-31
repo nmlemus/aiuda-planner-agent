@@ -4,8 +4,8 @@ import pytest
 import json
 from pathlib import Path
 
-from datapilot.core.context import RunContext
-from datapilot.utils.run_logger import RunLogger
+from dsagent.core.context import RunContext
+from dsagent.utils.run_logger import RunLogger
 
 
 class TestRunLogger:

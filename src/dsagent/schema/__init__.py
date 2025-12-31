@@ -1,6 +1,6 @@
 """Schema models for the AI Planner Agent."""
 
-from datapilot.schema.models import (
+from dsagent.schema.models import (
     AgentConfig,
     ExecutionResult,
     ExecutionRecord,

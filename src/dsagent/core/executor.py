@@ -8,10 +8,10 @@ from typing import Optional, TYPE_CHECKING
 
 from jupyter_client import KernelManager
 
-from datapilot.schema.models import ExecutionResult
+from dsagent.schema.models import ExecutionResult
 
 if TYPE_CHECKING:
-    from datapilot.utils.logger import AgentLogger
+    from dsagent.utils.logger import AgentLogger
 
 
 class JupyterExecutor:

@@ -15,7 +15,7 @@ if not os.getenv("OPENAI_API_KEY"):
     print("Please set OPENAI_API_KEY environment variable")
     exit(1)
 
-from datapilot import PlannerAgent, EventType
+from dsagent import PlannerAgent, EventType
 
 
 def main():

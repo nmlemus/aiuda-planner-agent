@@ -7,21 +7,21 @@ from pathlib import Path
 from typing import Optional, Callable, Any, Generator, TYPE_CHECKING
 from datetime import datetime
 
-from datapilot.schema.models import (
+from dsagent.schema.models import (
     AgentConfig,
     AgentEvent,
     EventType,
     SessionState,
     PlanState,
 )
-from datapilot.core.executor import JupyterExecutor
-from datapilot.core.engine import AgentEngine
-from datapilot.utils.logger import AgentLogger
-from datapilot.utils.notebook import NotebookBuilder
+from dsagent.core.executor import JupyterExecutor
+from dsagent.core.engine import AgentEngine
+from dsagent.utils.logger import AgentLogger
+from dsagent.utils.notebook import NotebookBuilder
 
 if TYPE_CHECKING:
-    from datapilot.core.context import RunContext
-    from datapilot.utils.run_logger import RunLogger
+    from dsagent.core.context import RunContext
+    from dsagent.utils.run_logger import RunLogger
 
 
 class PlannerAgent:
@@ -110,7 +110,7 @@ class PlannerAgent:
         # Initialize run logger if context provided
         self._run_logger: Optional["RunLogger"] = None
         if context:
-            from datapilot.utils.run_logger import RunLogger
+            from dsagent.utils.run_logger import RunLogger
             self._run_logger = RunLogger(context)
 
         # Initialize components

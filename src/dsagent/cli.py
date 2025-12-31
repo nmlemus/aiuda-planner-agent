@@ -21,8 +21,8 @@ for _env_path in _env_locations:
         load_dotenv(_env_path)
         break
 
-from datapilot import PlannerAgent, EventType
-from datapilot.core.context import RunContext
+from dsagent import PlannerAgent, EventType
+from dsagent.core.context import RunContext
 
 
 def main():

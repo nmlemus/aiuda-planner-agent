@@ -8,14 +8,14 @@ from datetime import datetime
 from pathlib import Path
 from typing import Dict, List, Optional, Any, TYPE_CHECKING
 
-from datapilot.schema.models import (
+from dsagent.schema.models import (
     ExecutionResult,
     ExecutionRecord,
     PlanState,
 )
 
 if TYPE_CHECKING:
-    from datapilot.core.context import RunContext
+    from dsagent.core.context import RunContext
 
 
 class ExecutionTracker:

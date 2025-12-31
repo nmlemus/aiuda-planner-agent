@@ -4,9 +4,9 @@ import pytest
 import json
 from pathlib import Path
 
-from datapilot.core.context import RunContext
-from datapilot.utils.notebook import NotebookBuilder, ExecutionTracker
-from datapilot.schema.models import ExecutionResult
+from dsagent.core.context import RunContext
+from dsagent.utils.notebook import NotebookBuilder, ExecutionTracker
+from dsagent.schema.models import ExecutionResult
 
 
 class TestNotebookBuilderWithContext:

@@ -1,4 +1,4 @@
-# DataPilot
+# DSAgent
 
 An AI-powered autonomous agent for data analysis with dynamic planning and persistent Jupyter kernel execution.
 
@@ -16,18 +16,18 @@ An AI-powered autonomous agent for data analysis with dynamic planning and persi
 
 Using pip:
 ```bash
-pip install datapilot
+pip install datascience-agent
 ```
 
 With FastAPI support:
 ```bash
-pip install "datapilot[api]"
+pip install "datascience-agent[api]"
 ```
 
 Using uv (recommended):
 ```bash
-uv pip install datapilot
-uv pip install "datapilot[api]"  # with FastAPI
+uv pip install datascience-agent
+uv pip install "datascience-agent[api]"  # with FastAPI
 ```
 
 For development:
@@ -42,7 +42,7 @@ uv sync --all-extras
 ### Basic Usage
 
 ```python
-from datapilot import PlannerAgent
+from dsagent import PlannerAgent
 
 # Create agent
 with PlannerAgent(model="gpt-4o", workspace="./workspace") as agent:
@@ -55,7 +55,7 @@ with PlannerAgent(model="gpt-4o", workspace="./workspace") as agent:
 ### With Streaming
 
 ```python
-from datapilot import PlannerAgent, EventType
+from dsagent import PlannerAgent, EventType
 
 agent = PlannerAgent(model="claude-3-sonnet-20240229")
 agent.start()
@@ -83,7 +83,7 @@ agent.shutdown()
 from fastapi import FastAPI
 from fastapi.responses import StreamingResponse
 from uuid import uuid4
-from datapilot import PlannerAgent, EventType
+from dsagent import PlannerAgent, EventType
 
 app = FastAPI()
 
@@ -110,7 +110,7 @@ async def analyze(task: str):
 The package includes a CLI for quick analysis from the terminal:
 
 ```bash
-datapilot "Analyze this dataset and create visualizations" --data ./my_data.csv
+dsagent "Analyze this dataset and create visualizations" --data ./my_data.csv
 ```
 
 ### CLI Options
@@ -129,19 +129,19 @@ datapilot "Analyze this dataset and create visualizations" --data ./my_data.csv
 
 ```bash
 # Basic analysis
-datapilot "Find trends and patterns" -d ./sales.csv
+dsagent "Find trends and patterns" -d ./sales.csv
 
 # With specific model
-datapilot "Build ML model" -d ./dataset -m claude-3-sonnet-20240229
+dsagent "Build ML model" -d ./dataset -m claude-3-sonnet-20240229
 
 # Custom output directory
-datapilot "Create charts" -d ./data -w ./output
+dsagent "Create charts" -d ./data -w ./output
 
 # With custom run ID
-datapilot "Analyze" -d ./data --run-id my-analysis-001
+dsagent "Analyze" -d ./data --run-id my-analysis-001
 
 # Quiet mode
-datapilot "Analyze" -d ./data -q
+dsagent "Analyze" -d ./data -q
 ```
 
 ### Output Structure
@@ -162,7 +162,7 @@ workspace/
 ## Configuration
 
 ```python
-from datapilot import PlannerAgent, RunContext
+from dsagent import PlannerAgent, RunContext
 
 # With automatic run isolation
 context = RunContext(workspace="./workspace")
@@ -191,7 +191,7 @@ Any model supported by [LiteLLM](https://docs.litellm.ai/docs/providers):
 ## Event Types
 
 ```python
-from datapilot import EventType
+from dsagent import EventType
 
 EventType.AGENT_STARTED       # Agent started processing
 EventType.AGENT_FINISHED      # Agent finished
@@ -212,7 +212,7 @@ EventType.ANSWER_REJECTED     # Answer rejected (plan incomplete)
 ## Architecture
 
 ```
-datapilot/
+dsagent/
 ├── agents/
 │   └── base.py          # PlannerAgent - main user interface
 ├── core/

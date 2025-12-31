@@ -6,7 +6,7 @@ import logging
 import sys
 from typing import Optional, Callable, Any
 
-from datapilot.schema.models import AgentEvent, EventType
+from dsagent.schema.models import AgentEvent, EventType
 
 
 class Colors:
@@ -88,7 +88,7 @@ class AgentLogger:
 
     def __init__(
         self,
-        name: str = "datapilot",
+        name: str = "dsagent",
         level: int = logging.INFO,
         event_callback: Optional[Callable[[AgentEvent], Any]] = None,
         verbose: bool = True,

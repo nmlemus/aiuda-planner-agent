@@ -5,7 +5,7 @@ from __future__ import annotations
 import re
 from typing import Optional
 
-from datapilot.schema.models import PlanStep, PlanState
+from dsagent.schema.models import PlanStep, PlanState
 
 
 class PlanParser:
