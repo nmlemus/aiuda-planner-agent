@@ -153,6 +153,11 @@ async def analyze(task: str):
             agent.shutdown()
 
     return StreamingResponse(event_stream(), media_type="text/event-stream")
+
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run(app, host="0.0.0.0", port=8000)
+
 ```
 
 ## Command Line Interface
