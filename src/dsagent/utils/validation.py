@@ -16,14 +16,16 @@ class ConfigurationError(Exception):
 MODEL_PROVIDER_KEYS = {
     # OpenAI models
     "gpt-": "OPENAI_API_KEY",
-    "o1-": "OPENAI_API_KEY",
     "o1": "OPENAI_API_KEY",
+    "o3": "OPENAI_API_KEY",
     # Anthropic models
-    "claude-": "ANTHROPIC_API_KEY",
+    "claude": "ANTHROPIC_API_KEY",
     "anthropic/": "ANTHROPIC_API_KEY",
     # Google models
     "gemini": "GOOGLE_API_KEY",
     "google/": "GOOGLE_API_KEY",
+    # DeepSeek
+    "deepseek/": "DEEPSEEK_API_KEY",
     # Azure OpenAI
     "azure/": "AZURE_API_KEY",
     # Local models (no key required)

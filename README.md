@@ -83,6 +83,30 @@ The `.env` file is searched in this order:
 
 See [.env.example](.env.example) for all available configuration options.
 
+## Supported Models
+
+DSAgent is built on [LiteLLM](https://docs.litellm.ai/), which provides a unified interface to 100+ LLM providers. Just set your API key and specify the model - LiteLLM handles the rest automatically.
+
+| Model | Provider | API Key | Endpoint |
+|-------|----------|---------|----------|
+| `gpt-4o`, `o1`, `o3-mini` | OpenAI | `OPENAI_API_KEY` | Auto |
+| `claude-opus-4`, `claude-3.7-sonnet`, `claude-3.5-sonnet` | Anthropic | `ANTHROPIC_API_KEY` | Auto |
+| `gemini-2.5-pro`, `gemini-2.5-flash` | Google | `GOOGLE_API_KEY` | Auto |
+| `deepseek/deepseek-r1`, `deepseek/deepseek-chat` | DeepSeek | `DEEPSEEK_API_KEY` | Auto |
+| `ollama/llama3.2`, `ollama/deepseek-r1` | Ollama | None | localhost:11434 |
+
+**Quick example:**
+```bash
+# Just set your API key and go
+export OPENAI_API_KEY="sk-..."
+dsagent "Analyze this data" --model gpt-4o --data ./data.csv
+
+# Or use a local model (no API key needed)
+dsagent "Write fibonacci code" --model ollama/llama3
+```
+
+For detailed setup instructions (Ollama, Azure, LM Studio, etc.), see [docs/MODELS.md](docs/MODELS.md).
+
 ## Quick Start
 
 ### Basic Usage
@@ -429,16 +453,6 @@ Some popular MCP servers you can use:
 | Puppeteer | `@modelcontextprotocol/server-puppeteer` | Browser automation |
 
 See [MCP Servers Directory](https://github.com/modelcontextprotocol/servers) for more options.
-
-## Supported Models
-
-Any model supported by [LiteLLM](https://docs.litellm.ai/docs/providers):
-
-- OpenAI: `gpt-4o`, `gpt-4-turbo`, `gpt-3.5-turbo`
-- Anthropic: `claude-3-opus-20240229`, `claude-3-sonnet-20240229`
-- Google: `gemini-pro`, `gemini-1.5-pro`
-- Ollama: `ollama/llama3`, `ollama/codellama`
-- And many more...
 
 ## Event Types
 

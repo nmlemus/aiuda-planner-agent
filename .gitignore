@@ -58,7 +58,6 @@ workspace/
 workspaces/
 *.ipynb
 !examples/*.ipynb
-docs/
 
 # uv
 .python-version
