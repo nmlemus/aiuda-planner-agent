@@ -27,6 +27,3 @@ Use boruta (already installed) for feature selection and pycaret to select the b
 model." --data /Users/nmlemus/Downloads/house-prices-advanced-regression-techniques \
 --model claude-sonnet-4-5-20250929 --workspace examples
 ```
-
-
-
