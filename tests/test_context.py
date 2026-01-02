@@ -115,3 +115,62 @@ class TestRunContext:
         repr_str = repr(context)
         assert "RunContext" in repr_str
         assert "test-run" in repr_str
+
+
+class TestCopyData:
+    """Tests for RunContext.copy_data method."""
+
+    def test_copy_single_file(self, tmp_path):
+        """Test copying a single file to data directory."""
+        # Create a source file
+        source_file = tmp_path / "source" / "data.csv"
+        source_file.parent.mkdir(parents=True)
+        source_file.write_text("col1,col2\n1,2\n3,4")
+
+        # Create context and copy data
+        context = RunContext(workspace=tmp_path / "workspace", run_id="test")
+        result = context.copy_data(source_file)
+
+        # Verify file was copied
+        copied_file = context.data_path / "data.csv"
+        assert copied_file.exists()
+        assert copied_file.read_text() == "col1,col2\n1,2\n3,4"
+        assert "data.csv" in result
+
+    def test_copy_directory(self, tmp_path):
+        """Test copying directory contents to data directory."""
+        # Create source directory with multiple files
+        source_dir = tmp_path / "source_data"
+        source_dir.mkdir()
+        (source_dir / "file1.csv").write_text("a,b\n1,2")
+        (source_dir / "file2.csv").write_text("x,y\n3,4")
+        (source_dir / "readme.txt").write_text("test data")
+
+        # Create context and copy data
+        context = RunContext(workspace=tmp_path / "workspace", run_id="test")
+        result = context.copy_data(source_dir)
+
+        # Verify all files were copied
+        assert (context.data_path / "file1.csv").exists()
+        assert (context.data_path / "file2.csv").exists()
+        assert (context.data_path / "readme.txt").exists()
+        assert "3 files" in result
+
+    def test_copy_nonexistent_path_raises(self, tmp_path):
+        """Test that copying a nonexistent path raises FileNotFoundError."""
+        context = RunContext(workspace=tmp_path, run_id="test")
+
+        with pytest.raises(FileNotFoundError) as exc_info:
+            context.copy_data("/nonexistent/path/data.csv")
+        assert "does not exist" in str(exc_info.value)
+
+    def test_copy_empty_directory(self, tmp_path):
+        """Test copying an empty directory."""
+        # Create empty source directory
+        source_dir = tmp_path / "empty_data"
+        source_dir.mkdir()
+
+        context = RunContext(workspace=tmp_path / "workspace", run_id="test")
+        result = context.copy_data(source_dir)
+
+        assert "0 files" in result

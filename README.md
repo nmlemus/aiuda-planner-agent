@@ -49,6 +49,41 @@ cd dsagent
 uv sync --all-extras
 ```
 
+## Configuration
+
+### API Keys
+
+DSAgent requires an API key for your chosen LLM provider. Set it via environment variable or `.env` file:
+
+**Option 1: Environment variable**
+```bash
+# OpenAI
+export OPENAI_API_KEY="sk-..."
+
+# Anthropic (Claude)
+export ANTHROPIC_API_KEY="sk-ant-..."
+
+# Google (Gemini)
+export GOOGLE_API_KEY="..."
+```
+
+**Option 2: .env file**
+
+Copy the example and fill in your values:
+```bash
+cp .env.example .env
+# Edit .env with your API keys
+```
+
+The `.env` file is searched in this order:
+1. Current working directory
+2. Project root
+3. `~/.dsagent/.env`
+
+**Priority order:** CLI arguments > Environment variables > `.env` file > defaults
+
+See [.env.example](.env.example) for all available configuration options.
+
 ## Quick Start
 
 ### Basic Usage
@@ -56,10 +91,14 @@ uv sync --all-extras
 ```python
 from dsagent import PlannerAgent
 
-# Create agent
-with PlannerAgent(model="gpt-4o", workspace="./workspace") as agent:
-    result = agent.run("Analyze sales_data.csv and identify top performing products")
+# Basic usage - task only
+with PlannerAgent(model="gpt-4o") as agent:
+    result = agent.run("Write a function to calculate fibonacci numbers")
+    print(result.answer)
 
+# With data file - automatically copied to workspace/data/
+with PlannerAgent(model="gpt-4o", data="./sales_data.csv") as agent:
+    result = agent.run("Analyze this dataset and identify top performing products")
     print(result.answer)
     print(f"Notebook: {result.notebook_path}")
 ```
@@ -122,14 +161,18 @@ async def analyze(task: str):
 The package includes a CLI for quick analysis from the terminal:
 
 ```bash
+# With data file
 dsagent "Analyze this dataset and create visualizations" --data ./my_data.csv
+
+# Without data (code generation, research, etc.)
+dsagent "Write a Python script to scrape weather data" --model claude-3-5-sonnet-20241022
 ```
 
 ### CLI Options
 
 | Option | Short | Description |
 |--------|-------|-------------|
-| `--data` | `-d` | Path to data file or directory (required) |
+| `--data` | `-d` | Path to data file or directory (optional) |
 | `--model` | `-m` | LLM model to use (default: gpt-4o) |
 | `--workspace` | `-w` | Output directory (default: ./workspace) |
 | `--run-id` | | Custom run ID for this execution |
@@ -142,8 +185,11 @@ dsagent "Analyze this dataset and create visualizations" --data ./my_data.csv
 ### CLI Examples
 
 ```bash
-# Basic analysis
+# Basic analysis with data
 dsagent "Find trends and patterns" -d ./sales.csv
+
+# Code generation (no data needed)
+dsagent "Write a REST API client for GitHub" --model gpt-4o
 
 # With specific model
 dsagent "Build ML model" -d ./dataset -m claude-3-sonnet-20240229
@@ -151,8 +197,8 @@ dsagent "Build ML model" -d ./dataset -m claude-3-sonnet-20240229
 # Custom output directory
 dsagent "Create charts" -d ./data -w ./output
 
-# With custom run ID
-dsagent "Analyze" -d ./data --run-id my-analysis-001
+# With MCP tools (no data)
+dsagent "Search for Python best practices and summarize" --mcp-config ~/.dsagent/mcp.yaml
 
 # Quiet mode
 dsagent "Analyze" -d ./data -q
@@ -173,16 +219,16 @@ workspace/
             └── events.jsonl   # Structured events for ML
 ```
 
-## Configuration
+## Agent Configuration
 
 ```python
 from dsagent import PlannerAgent, RunContext
 
-# With automatic run isolation
-context = RunContext(workspace="./workspace")
+# Simple usage
 agent = PlannerAgent(
     model="gpt-4o",           # Any LiteLLM-supported model
-    context=context,          # Run context for isolation
+    data="./my_data.csv",     # Optional: data file or directory
+    workspace="./workspace",  # Working directory
     max_rounds=30,            # Max agent iterations
     max_tokens=4096,          # Max tokens per response
     temperature=0.2,          # LLM temperature
@@ -190,7 +236,25 @@ agent = PlannerAgent(
     verbose=True,             # Print to console
     event_callback=None,      # Callback for events
 )
+
+# With run isolation (for multi-user scenarios)
+context = RunContext(workspace="./workspace")
+context.copy_data("./dataset")  # Copy data to run's data folder
+agent = PlannerAgent(model="gpt-4o", context=context)
 ```
+
+### Workspace Structure
+
+When running, DSAgent creates this structure:
+```
+workspace/
+├── data/          # Input data (read from here)
+├── artifacts/     # Outputs: images, models, CSVs, reports
+├── notebooks/     # Generated Jupyter notebooks
+└── logs/          # Execution logs
+```
+
+With `RunContext`, each run gets isolated storage under `workspace/runs/{run_id}/`.
 
 ## Human-in-the-Loop (HITL)
 
@@ -329,9 +393,13 @@ agent.shutdown()
 # Set API keys
 export BRAVE_API_KEY="your-brave-api-key"
 
-# Run with MCP tools
+# Run with MCP tools (no data needed for web search)
 dsagent "Search for Python best practices and summarize" \
-  --data ./data.csv \
+  --mcp-config ~/.dsagent/mcp.yaml
+
+# With data
+dsagent "Search for similar datasets online and compare with mine" \
+  --data ./my_data.csv \
   --mcp-config ~/.dsagent/mcp.yaml
 ```
 

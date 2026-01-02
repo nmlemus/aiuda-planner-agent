@@ -4,7 +4,6 @@
 import argparse
 import os
 import sys
-import shutil
 from pathlib import Path
 
 # Load .env file if exists (before importing agent)
@@ -14,7 +13,7 @@ from dotenv import load_dotenv
 _env_locations = [
     Path.cwd() / ".env",                          # Current directory
     Path(__file__).parent.parent.parent.parent / ".env",  # Project root
-    Path.home() / ".aiuda" / ".env",              # User config
+    Path.home() / ".dsagent" / ".env",              # User config
 ]
 for _env_path in _env_locations:
     if _env_path.exists():
@@ -23,6 +22,7 @@ for _env_path in _env_locations:
 
 from dsagent import PlannerAgent, EventType, HITLMode
 from dsagent.core.context import RunContext
+from dsagent.utils.validation import validate_configuration, ConfigurationError
 
 
 def get_hitl_input(prompt: str, options: dict[str, str]) -> str:
@@ -79,7 +79,8 @@ Examples:
   dsagent "Build a predictive model" --data ./dataset --model gpt-4o
   dsagent "Create visualizations" --data ./data --workspace ./output
   dsagent "Analyze with approval" --data ./data --hitl plan_only
-  dsagent "Search and analyze" --data ./data --mcp-config ~/.dsagent/mcp.yaml
+  dsagent "Search and analyze" --mcp-config ~/.dsagent/mcp.yaml
+  dsagent "Write code to calculate fibonacci" --model claude-3-5-sonnet-20241022
         """,
     )
 
@@ -92,8 +93,8 @@ Examples:
     parser.add_argument(
         "--data", "-d",
         type=str,
-        required=True,
-        help="Path to data file or directory to analyze",
+        default=None,
+        help="Path to data file or directory to analyze (optional)",
     )
 
     parser.add_argument(
@@ -153,27 +154,25 @@ Examples:
 
     args = parser.parse_args()
 
-    # Validate data path
-    data_path = Path(args.data).resolve()
-    if not data_path.exists():
-        print(f"Error: Data path does not exist: {data_path}", file=sys.stderr)
+    # Validate model and API key configuration
+    try:
+        validate_configuration(args.model)
+    except ConfigurationError as e:
+        print(f"Configuration Error: {e}", file=sys.stderr)
         sys.exit(1)
 
     # Create run context with isolated workspace
     workspace = Path(args.workspace).resolve()
     context = RunContext(workspace=workspace, run_id=args.run_id)
 
-    # Copy data to run-specific data directory
-    if data_path.is_file():
-        dest_file = context.data_path / data_path.name
-        shutil.copy2(data_path, dest_file)
-        data_info = f"File '{data_path.name}' copied to run"
-    else:
-        # Copy directory contents
-        for item in data_path.iterdir():
-            if item.is_file():
-                shutil.copy2(item, context.data_path / item.name)
-        data_info = f"Directory contents from '{data_path.name}' copied to run"
+    # Copy data to run-specific data directory (if provided)
+    data_info = None
+    if args.data:
+        try:
+            data_info = context.copy_data(args.data)
+        except FileNotFoundError as e:
+            print(f"Error: {e}", file=sys.stderr)
+            sys.exit(1)
 
     # Parse HITL mode
     hitl_mode = HITLMode(args.hitl)
@@ -187,7 +186,8 @@ Examples:
             sys.exit(1)
 
     print(f"Run ID: {context.run_id}")
-    print(f"Data: {data_info}")
+    if data_info:
+        print(f"Data: {data_info}")
     print(f"Run Path: {context.run_path}")
     print(f"Model: {args.model}")
     if hitl_mode != HITLMode.NONE:
@@ -196,13 +196,16 @@ Examples:
         print(f"MCP Config: {mcp_config_path}")
     print("-" * 60)
 
-    # Build task with data context
-    task_with_context = f"""
+    # Build task with data context (only mention data folder if data was provided)
+    if data_info:
+        task_with_context = f"""
 {args.task}
 
 The data is available in the 'data/' subdirectory of the current working directory.
 List files in 'data/' first to see what's available.
 """
+    else:
+        task_with_context = args.task
 
     # Create and run agent with context
     agent = PlannerAgent(

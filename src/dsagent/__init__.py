@@ -44,6 +44,12 @@ from dsagent.core.hitl import HITLGateway
 from dsagent.utils.logger import AgentLogger, Colors
 from dsagent.utils.notebook import NotebookBuilder, ExecutionTracker
 from dsagent.utils.run_logger import RunLogger
+from dsagent.utils.validation import (
+    ConfigurationError,
+    validate_configuration,
+    validate_api_key,
+    get_provider_for_model,
+)
 
 # Optional MCP imports (requires mcp extra)
 try:
@@ -95,4 +101,9 @@ __all__ = [
     "MCPManager",
     "MCPConfig",
     "MCPServerConfig",
+    # Validation
+    "ConfigurationError",
+    "validate_configuration",
+    "validate_api_key",
+    "get_provider_for_model",
 ]

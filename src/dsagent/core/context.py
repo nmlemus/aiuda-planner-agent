@@ -2,10 +2,11 @@
 
 from __future__ import annotations
 
+import shutil
 import uuid
 from datetime import datetime
 from pathlib import Path
-from typing import Optional
+from typing import Optional, Union
 
 
 class RunContext:
@@ -117,6 +118,35 @@ class RunContext:
             Full path to the notebook
         """
         return self.notebooks_path / filename
+
+    def copy_data(self, source: Union[str, Path]) -> str:
+        """Copy data file or directory contents to the run's data folder.
+
+        Args:
+            source: Path to a data file or directory
+
+        Returns:
+            A description of what was copied
+
+        Raises:
+            FileNotFoundError: If the source path does not exist
+        """
+        source_path = Path(source).resolve()
+        if not source_path.exists():
+            raise FileNotFoundError(f"Data path does not exist: {source_path}")
+
+        if source_path.is_file():
+            dest_file = self.data_path / source_path.name
+            shutil.copy2(source_path, dest_file)
+            return f"File '{source_path.name}' copied to run"
+        else:
+            # Copy directory contents (files only, not subdirectories)
+            files_copied = 0
+            for item in source_path.iterdir():
+                if item.is_file():
+                    shutil.copy2(item, self.data_path / item.name)
+                    files_copied += 1
+            return f"Directory '{source_path.name}' ({files_copied} files) copied to run"
 
     def to_dict(self) -> dict:
         """Convert context to dictionary for serialization."""

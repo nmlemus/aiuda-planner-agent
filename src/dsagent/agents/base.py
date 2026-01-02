@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import shutil
 from pathlib import Path
 from typing import Optional, Callable, Any, Generator, Dict, Union, TYPE_CHECKING
 from datetime import datetime
@@ -23,6 +24,7 @@ from dsagent.core.engine import AgentEngine
 from dsagent.core.hitl import HITLGateway
 from dsagent.utils.logger import AgentLogger
 from dsagent.utils.notebook import NotebookBuilder
+from dsagent.utils.validation import validate_configuration
 
 if TYPE_CHECKING:
     from dsagent.core.context import RunContext
@@ -73,6 +75,7 @@ class PlannerAgent:
         self,
         model: str = "gpt-4o",
         workspace: str | Path = "./workspace",
+        data: Optional[Union[str, Path]] = None,
         session_id: Optional[str] = None,
         max_rounds: int = 30,
         max_tokens: int = 4096,
@@ -90,6 +93,7 @@ class PlannerAgent:
         Args:
             model: LLM model to use (any LiteLLM-supported model)
             workspace: Working directory for files and notebooks
+            data: Path to data file or directory (optional, copied to workspace/data/)
             session_id: Unique session identifier (for multi-user scenarios)
             max_rounds: Maximum agent loop iterations
             max_tokens: Max tokens per LLM response
@@ -101,7 +105,14 @@ class PlannerAgent:
             hitl: Human-in-the-Loop mode (NONE, PLAN_ONLY, ON_ERROR, PLAN_AND_ANSWER, FULL)
             hitl_timeout: Max seconds to wait for human feedback (default 5 min)
             mcp_config: MCP configuration (path to YAML, dict, or MCPConfig object)
+
+        Raises:
+            ConfigurationError: If the model or API key configuration is invalid
+            FileNotFoundError: If data path does not exist
         """
+        # Validate model and API key before anything else
+        validate_configuration(model)
+
         # Store or create context
         self.context = context
         if context:
@@ -109,6 +120,28 @@ class PlannerAgent:
         else:
             self.workspace = Path(workspace).resolve()
         self.workspace.mkdir(parents=True, exist_ok=True)
+
+        # Create workspace structure (data/ and artifacts/ folders)
+        self._data_path = self.workspace / "data"
+        self._data_path.mkdir(parents=True, exist_ok=True)
+        self._artifacts_path = self.workspace / "artifacts"
+        self._artifacts_path.mkdir(parents=True, exist_ok=True)
+        self._has_data = False
+
+        # Copy data if provided
+        if data:
+            data_path = Path(data).resolve()
+            if not data_path.exists():
+                raise FileNotFoundError(f"Data path does not exist: {data_path}")
+
+            if data_path.is_file():
+                shutil.copy2(data_path, self._data_path / data_path.name)
+            else:
+                # Copy directory contents
+                for item in data_path.iterdir():
+                    if item.is_file():
+                        shutil.copy2(item, self._data_path / item.name)
+            self._has_data = True
 
         # Create configuration
         self.config = AgentConfig(
@@ -335,9 +368,18 @@ class PlannerAgent:
         if not self._started:
             self.start()
 
+        # Add data context to task if data was provided
+        if self._has_data:
+            task_with_context = f"""{task}
+
+The data is available in the 'data/' subdirectory of the current working directory.
+List files in 'data/' first to see what's available."""
+        else:
+            task_with_context = task
+
         # Initialize notebook builder with context if available
         self._notebook = NotebookBuilder(
-            task=task,
+            task=task,  # Use original task for notebook title
             workspace=self.workspace,
             context=self.context,
         )
@@ -357,7 +399,7 @@ class PlannerAgent:
         # Run the agent loop
         self.logger.print_header(f"Task: {task}")
 
-        yield from self._engine.run_stream(task)
+        yield from self._engine.run_stream(task_with_context)
 
         # Generate clean notebook at the end
         self.logger.print_header("Task Complete")

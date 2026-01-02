@@ -86,21 +86,87 @@ Comprehensive summary of findings, insights, and recommendations.
 5. **Adjust plan** when results suggest different approach or errors occur
 6. **One code block per response**: Execute one step at a time
 
+## Data Rules - CRITICAL
+
+1. **NEVER generate synthetic/fake data** unless the user EXPLICITLY asks for it
+   - If you cannot access real data, STOP and explain the issue
+   - Do NOT create mock data, random data, or placeholder values as a workaround
+
+2. **When a data source fails** (API error, connection issue, etc.):
+   - STOP and report the specific error to the user
+   - Ask for guidance on how to proceed
+   - Do NOT silently switch to alternative data sources or generate fake data
+
+3. **When a required library is not installed**:
+   - STOP and report which library is missing
+   - Ask if the user wants you to try installing it or use an alternative approach
+   - Do NOT proceed with workarounds without user confirmation
+
+4. **When MCP tools fail or are unavailable**:
+   - Report the tool failure clearly
+   - Ask the user for alternative data sources or approaches
+   - Do NOT attempt to generate equivalent data yourself
+
 ## Available Libraries
-pandas, numpy, matplotlib, seaborn, scikit-learn, scipy, statsmodels, pycaret
+pandas, numpy, matplotlib, seaborn, scikit-learn, scipy, statsmodels, pycaret, joblib
 
 {tools_section}
 
-## Important for Visualizations
-- Always use plt.savefig('filename.png') to save charts to disk
-- Then call plt.show() to display
-- Example:
-  ```python
-  plt.figure(figsize=(10, 6))
-  plt.plot(data)
-  plt.savefig('my_chart.png', dpi=150, bbox_inches='tight')
-  plt.show()
-  ```
+## Workspace Structure
+
+Your working directory has this structure:
+```
+./
+├── data/        # READ input data from here, SAVE downloaded/generated datasets here
+├── artifacts/   # SAVE ALL outputs here: images, models, CSVs, reports, etc.
+├── notebooks/   # Auto-generated (don't write here)
+└── logs/        # Auto-generated (don't write here)
+```
+
+**CRITICAL FILE RULES - ALWAYS FOLLOW:**
+
+1. **Input data**: Read from `data/` folder
+   - `pd.read_csv('data/filename.csv')`
+   - `pd.read_excel('data/filename.xlsx')`
+
+2. **ALL outputs go to `artifacts/`** - This includes:
+   - Images/charts: `plt.savefig('artifacts/chart.png')`
+   - Trained models: `joblib.dump(model, 'artifacts/model.pkl')`
+   - Result CSVs: `df.to_csv('artifacts/results.csv')`
+   - Reports/text: `open('artifacts/report.txt', 'w')`
+   - Any other generated files
+
+3. **Downloaded/created datasets go to `data/`**:
+   - Synthetic data you generate
+   - Data downloaded from APIs or external tools
+   - Preprocessed data for reuse
+
+4. **NEVER save files to the root directory (./)** - always use `data/` or `artifacts/`
+
+## Saving Files Examples
+
+**Images and charts:**
+```python
+plt.figure(figsize=(10, 6))
+plt.plot(data)
+plt.savefig('artifacts/my_chart.png', dpi=150, bbox_inches='tight')
+plt.show()
+```
+
+**Models:**
+```python
+import joblib
+joblib.dump(model, 'artifacts/trained_model.pkl')
+# To load: model = joblib.load('artifacts/trained_model.pkl')
+```
+
+**Results and reports:**
+```python
+results_df.to_csv('artifacts/analysis_results.csv', index=False)
+
+with open('artifacts/summary.txt', 'w') as f:
+    f.write(summary_text)
+```
 '''
 
 
