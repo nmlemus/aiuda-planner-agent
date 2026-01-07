@@ -12,6 +12,24 @@ class ConfigurationError(Exception):
     pass
 
 
+def apply_llm_api_base(model: str) -> None:
+    """Map LLM_API_BASE to provider-specific base env vars when appropriate."""
+    api_base = os.getenv("LLM_API_BASE")
+    if not api_base:
+        return
+
+    model_lower = model.lower()
+    target_env = None
+
+    if model_lower.startswith("azure/"):
+        target_env = "AZURE_API_BASE"
+    elif model_lower.startswith(("gpt-", "o1", "o3", "openai/")):
+        target_env = "OPENAI_API_BASE"
+
+    if target_env and not os.getenv(target_env):
+        os.environ[target_env] = api_base
+
+
 # Mapping of model prefixes to required environment variables
 MODEL_PROVIDER_KEYS = {
     # OpenAI models
@@ -139,5 +157,6 @@ def validate_configuration(model: str) -> None:
     Raises:
         ConfigurationError: If any configuration is invalid
     """
+    apply_llm_api_base(model)
     # validate_model_name(model)
     validate_api_key(model)

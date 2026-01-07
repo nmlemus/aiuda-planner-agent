@@ -74,14 +74,28 @@ cp .env.example .env
 # Edit .env with your API keys
 ```
 
-The `.env` file is searched in this order:
+The `.env` file is searched in this order for the CLI:
 1. Current working directory
 2. Project root
 3. `~/.dsagent/.env`
 
+When using `PlannerAgent` directly in Python, only the current working directory `.env` is loaded.
+
 **Priority order:** CLI arguments > Environment variables > `.env` file > defaults
 
+If you set `LLM_API_BASE`, DSAgent maps it to the provider base for OpenAI-compatible models
+(`OPENAI_API_BASE`) or Azure (`AZURE_API_BASE`) when those are not already set.
+
 See [.env.example](.env.example) for all available configuration options.
+
+**LiteLLM proxy example (OpenAI-compatible):**
+```bash
+# Point DSAgent to a LiteLLM proxy
+export LLM_MODEL="openai/gpt-4o"
+export LLM_API_BASE="http://localhost:4000/v1"
+export OPENAI_API_KEY="not-needed"
+dsagent "Analyze this data" --data ./data.csv
+```
 
 ## Supported Models
 
