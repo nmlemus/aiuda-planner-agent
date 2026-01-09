@@ -184,6 +184,35 @@ dsagent mcp add fetch
 **Tools provided:**
 - `fetch` - Fetch URL content
 
+### bigquery
+
+Google BigQuery database access using the official Google Toolbox.
+
+```bash
+dsagent mcp add bigquery
+```
+
+**Required:**
+- Path to Google Toolbox binary (prompted during setup)
+- `BIGQUERY_PROJECT` - Your GCP project ID
+
+**Download:** [Google MCP Toolbox](https://github.com/googleapis/genai-toolbox)
+
+**Tools provided:**
+- BigQuery SQL queries
+- Table listing and schema inspection
+- Data exploration
+
+**Manual configuration:**
+```yaml
+servers:
+  - name: bigquery
+    transport: stdio
+    command: ["/path/to/toolbox", "--prebuilt", "bigquery", "--stdio"]
+    env:
+      BIGQUERY_PROJECT: "your-project-id"
+```
+
 ---
 
 ## Python API

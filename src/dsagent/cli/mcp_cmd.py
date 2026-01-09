@@ -51,6 +51,15 @@ MCP_TEMPLATES: Dict[str, Dict[str, Any]] = {
         "transport": "stdio",
         "command": ["npx", "-y", "@modelcontextprotocol/server-fetch"],
     },
+    "bigquery": {
+        "name": "bigquery",
+        "description": "Google BigQuery database access (requires Google Toolbox)",
+        "transport": "stdio",
+        "command_prompt": "Enter path to Google Toolbox binary",
+        "command_template": ["{toolbox_path}", "--prebuilt", "bigquery", "--stdio"],
+        "env": {"BIGQUERY_PROJECT": "${BIGQUERY_PROJECT}"},
+        "required_env": ["BIGQUERY_PROJECT"],
+    },
 }
 
 
@@ -122,10 +131,24 @@ def cmd_add(console: Console, config_path: Path, template_name: str) -> int:
     server_config: Dict[str, Any] = {
         "name": template["name"],
         "transport": template["transport"],
-        "command": list(template["command"]),
     }
 
-    # Handle command arguments
+    # Handle command - either direct or template-based
+    if "command" in template:
+        server_config["command"] = list(template["command"])
+    elif "command_template" in template:
+        # Prompt for values needed in the template
+        if "command_prompt" in template:
+            value = Prompt.ask(template["command_prompt"])
+            # Replace placeholder in command template
+            server_config["command"] = [
+                part.format(toolbox_path=value) if "{" in part else part
+                for part in template["command_template"]
+            ]
+        else:
+            server_config["command"] = list(template["command_template"])
+
+    # Handle command arguments (for filesystem, etc.)
     if "args_prompt" in template:
         args = Prompt.ask(template["args_prompt"])
         server_config["command"].extend(args.split(","))

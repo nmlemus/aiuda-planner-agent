@@ -180,7 +180,7 @@ dsagent mcp add brave-search
 dsagent --mcp-config ~/.dsagent/mcp.yaml
 ```
 
-Available templates: `brave-search`, `filesystem`, `github`, `memory`, `fetch`
+Available templates: `brave-search`, `filesystem`, `github`, `memory`, `fetch`, `bigquery`
 
 For MCP configuration details, see [docs/MCP.md](docs/MCP.md).
 

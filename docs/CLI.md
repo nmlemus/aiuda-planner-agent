@@ -234,6 +234,7 @@ dsagent mcp add filesystem
 dsagent mcp add github
 dsagent mcp add memory
 dsagent mcp add fetch
+dsagent mcp add bigquery
 ```
 
 #### Available Templates
@@ -245,6 +246,7 @@ dsagent mcp add fetch
 | `github` | GitHub repository access | `GITHUB_TOKEN` |
 | `memory` | Persistent memory/knowledge base | None |
 | `fetch` | Fetch and parse web content | None |
+| `bigquery` | Google BigQuery access | Toolbox path, `BIGQUERY_PROJECT` |
 
 ### `dsagent mcp remove <name>`
 
