@@ -5,40 +5,38 @@
 [![Python](https://img.shields.io/pypi/pyversions/datascience-agent)](https://pypi.org/project/datascience-agent/)
 [![License](https://img.shields.io/github/license/nmlemus/dsagent)](https://github.com/nmlemus/dsagent/blob/main/LICENSE)
 
-An AI-powered autonomous agent for data analysis with dynamic planning and persistent Jupyter kernel execution.
+An AI-powered autonomous agent for data science with persistent Jupyter kernel execution, session management, and conversational interface.
+
+```
+    ____  _____  ___                    __
+   / __ \/ ___/ /   | ____ ____  ____  / /_
+  / / / /\__ \ / /| |/ __ `/ _ \/ __ \/ __/
+ / /_/ /___/ // ___ / /_/ /  __/ / / / /_
+/_____//____//_/  |_\__, /\___/_/ /_/\__/
+                   /____/
+```
 
 ## Features
 
-- **Dynamic Planning**: Agent creates and follows plans with [x]/[ ] step tracking
-- **Persistent Execution**: Code runs in a Jupyter kernel with variable persistence
+- **Conversational Interface**: Interactive chat with persistent context and sessions
+- **Dynamic Planning**: Agent creates and follows plans with step tracking
+- **Persistent Execution**: Code runs in a Jupyter kernel with variable persistence across messages
+- **Session Management**: Save and resume conversations with full kernel state
 - **Multi-Provider LLM**: Supports OpenAI, Anthropic, Google, Ollama via LiteLLM
+- **MCP Tools**: Connect to external tools (web search, databases, etc.) via Model Context Protocol
+- **Human-in-the-Loop**: Configurable checkpoints for plan and code approval
 - **Notebook Generation**: Automatically generates clean, runnable Jupyter notebooks
-- **Event Streaming**: Real-time events for UI integration
-- **Comprehensive Logging**: Full execution logs for debugging and ML retraining
-- **Human-in-the-Loop**: Configurable checkpoints for human approval and feedback
-- **MCP Tools Support**: Connect to external tools via Model Context Protocol (web search, databases, etc.)
 
 ## Installation
 
-Using pip:
 ```bash
 pip install datascience-agent
 ```
 
-With FastAPI support:
+With optional features:
 ```bash
-pip install "datascience-agent[api]"
-```
-
-With MCP tools support:
-```bash
-pip install "datascience-agent[mcp]"
-```
-
-Using uv (recommended):
-```bash
-uv pip install datascience-agent
-uv pip install "datascience-agent[api]"  # with FastAPI
+pip install "datascience-agent[api]"   # FastAPI server support
+pip install "datascience-agent[mcp]"   # MCP tools support
 ```
 
 For development:
@@ -48,469 +46,179 @@ cd dsagent
 uv sync --all-extras
 ```
 
-## Configuration
-
-### API Keys
-
-DSAgent requires an API key for your chosen LLM provider. Set it via environment variable or `.env` file:
-
-**Option 1: Environment variable**
-```bash
-# OpenAI
-export OPENAI_API_KEY="sk-..."
-
-# Anthropic (Claude)
-export ANTHROPIC_API_KEY="sk-ant-..."
-
-# Google (Gemini)
-export GOOGLE_API_KEY="..."
-```
-
-**Option 2: .env file**
-
-Copy the example and fill in your values:
-```bash
-cp .env.example .env
-# Edit .env with your API keys
-```
-
-The `.env` file is searched in this order for the CLI:
-1. Current working directory
-2. Project root
-3. `~/.dsagent/.env`
-
-When using `PlannerAgent` directly in Python, only the current working directory `.env` is loaded.
-
-**Priority order:** CLI arguments > Environment variables > `.env` file > defaults
-
-If you set `LLM_API_BASE`, DSAgent maps it to the provider base for OpenAI-compatible models
-(`OPENAI_API_BASE`) or Azure (`AZURE_API_BASE`) when those are not already set.
-
-See [.env.example](.env.example) for all available configuration options.
-
-**LiteLLM proxy example (OpenAI-compatible):**
-```bash
-# Point DSAgent to a LiteLLM proxy
-export LLM_MODEL="openai/gpt-4o"
-export LLM_API_BASE="http://localhost:4000/v1"
-export OPENAI_API_KEY="not-needed"
-dsagent "Analyze this data" --data ./data.csv
-```
-
-## Supported Models
-
-DSAgent is built on [LiteLLM](https://docs.litellm.ai/), which provides a unified interface to 100+ LLM providers. Just set your API key and specify the model - LiteLLM handles the rest automatically.
-
-| Model | Provider | API Key | Endpoint |
-|-------|----------|---------|----------|
-| `gpt-4o`, `o1`, `o3-mini` | OpenAI | `OPENAI_API_KEY` | Auto |
-| `claude-opus-4`, `claude-3.7-sonnet`, `claude-3.5-sonnet` | Anthropic | `ANTHROPIC_API_KEY` | Auto |
-| `gemini-2.5-pro`, `gemini-2.5-flash` | Google | `GOOGLE_API_KEY` | Auto |
-| `deepseek/deepseek-r1`, `deepseek/deepseek-chat` | DeepSeek | `DEEPSEEK_API_KEY` | Auto |
-| `ollama/llama3.2`, `ollama/deepseek-r1` | Ollama | None | localhost:11434 |
-
-**Quick example:**
-```bash
-# Just set your API key and go
-export OPENAI_API_KEY="sk-..."
-dsagent "Analyze this data" --model gpt-4o --data ./data.csv
-
-# Or use a local model (no API key needed)
-dsagent "Write fibonacci code" --model ollama/llama3
-```
-
-For detailed setup instructions (Ollama, Azure, LM Studio, etc.), see [docs/MODELS.md](docs/MODELS.md).
-
 ## Quick Start
 
-### Basic Usage
+### 1. Setup (First Time)
+
+Run the setup wizard to configure your LLM provider:
+
+```bash
+dsagent init
+```
+
+This will:
+- Ask for your LLM provider (OpenAI, Anthropic, local, etc.)
+- Store your API key securely in `~/.dsagent/.env`
+- Optionally configure MCP tools (web search, etc.)
+
+### 2. Start Chatting
+
+```bash
+dsagent
+```
+
+This starts an interactive session where you can:
+- Chat naturally with the agent
+- Execute Python code with persistent variables
+- Analyze data files
+- Generate visualizations
+- Resume previous sessions
+
+### 3. One-Shot Tasks
+
+For batch processing or scripts:
+
+```bash
+dsagent run "Analyze sales trends" --data ./sales.csv
+```
+
+## CLI Commands
+
+| Command | Description |
+|---------|-------------|
+| `dsagent` | Start interactive chat (default) |
+| `dsagent chat` | Same as above, with explicit options |
+| `dsagent run "task"` | Execute a one-shot task |
+| `dsagent init` | Setup wizard for configuration |
+| `dsagent mcp list` | List configured MCP servers |
+| `dsagent mcp add <template>` | Add an MCP server |
+
+### Examples
+
+```bash
+# Interactive chat with specific model
+dsagent --model claude-sonnet-4-5
+
+# One-shot analysis
+dsagent run "Find patterns in this data" --data ./dataset.csv
+
+# Resume a previous session
+dsagent --session abc123
+
+# With MCP tools (web search)
+dsagent --mcp-config ~/.dsagent/mcp.yaml
+
+# Human-in-the-loop mode
+dsagent --hitl plan
+```
+
+For complete CLI documentation, see [docs/CLI.md](docs/CLI.md).
+
+## Python API
+
+DSAgent provides two agents for different use cases:
+
+### ConversationalAgent (Interactive)
+
+For building chat interfaces and interactive applications:
+
+```python
+from dsagent import ConversationalAgent, ConversationalAgentConfig
+
+config = ConversationalAgentConfig(model="gpt-4o")
+agent = ConversationalAgent(config)
+agent.start()
+
+# Chat with persistent context
+response = agent.chat("Load the iris dataset")
+print(response.content)
+
+response = agent.chat("Train a classifier on it")
+print(response.content)  # Has access to previous variables
+
+agent.shutdown()
+```
+
+### PlannerAgent (Batch)
+
+For one-shot tasks and automated pipelines:
 
 ```python
 from dsagent import PlannerAgent
 
-# Basic usage - task only
-with PlannerAgent(model="gpt-4o") as agent:
-    result = agent.run("Write a function to calculate fibonacci numbers")
-    print(result.answer)
-
-# With data file - automatically copied to workspace/data/
-with PlannerAgent(model="gpt-4o", data="./sales_data.csv") as agent:
-    result = agent.run("Analyze this dataset and identify top performing products")
+with PlannerAgent(model="gpt-4o", data="./data.csv") as agent:
+    result = agent.run("Analyze this dataset and create visualizations")
     print(result.answer)
     print(f"Notebook: {result.notebook_path}")
 ```
 
-### With Streaming
+For complete API documentation, see [docs/PYTHON_API.md](docs/PYTHON_API.md).
 
-```python
-from dsagent import PlannerAgent, EventType
+## Supported Models
 
-agent = PlannerAgent(model="claude-3-sonnet-20240229")
-agent.start()
+DSAgent uses [LiteLLM](https://docs.litellm.ai/) to support 100+ LLM providers:
 
-for event in agent.run_stream("Build a predictive model for customer churn"):
-    if event.type == EventType.PLAN_UPDATED:
-        print(f"Plan: {event.plan.raw_text if event.plan else ''}")
-    elif event.type == EventType.CODE_SUCCESS:
-        print("Code executed successfully")
-    elif event.type == EventType.CODE_FAILED:
-        print("Code execution failed")
-    elif event.type == EventType.ANSWER_ACCEPTED:
-        print(f"Answer: {event.message}")
+| Provider | Models | API Key |
+|----------|--------|---------|
+| OpenAI | `gpt-4o`, `o1`, `o3-mini` | `OPENAI_API_KEY` |
+| Anthropic | `claude-sonnet-4-5`, `claude-opus-4` | `ANTHROPIC_API_KEY` |
+| Google | `gemini-2.5-pro`, `gemini-2.5-flash` | `GOOGLE_API_KEY` |
+| DeepSeek | `deepseek/deepseek-r1` | `DEEPSEEK_API_KEY` |
+| Ollama | `ollama/llama3.2` | None (local) |
 
-# Get result with notebook after streaming
-result = agent.get_result()
-print(f"Notebook: {result.notebook_path}")
+For detailed model setup, see [docs/MODELS.md](docs/MODELS.md).
 
-agent.shutdown()
-```
+## MCP Tools
 
-### FastAPI Integration
-
-```python
-from fastapi import FastAPI
-from fastapi.responses import StreamingResponse
-from uuid import uuid4
-from dsagent import PlannerAgent, EventType
-
-app = FastAPI()
-
-@app.post("/analyze")
-async def analyze(task: str):
-    async def event_stream():
-        agent = PlannerAgent(
-            model="gpt-4o",
-            session_id=str(uuid4()),
-        )
-        agent.start()
-
-        try:
-            for event in agent.run_stream(task):
-                yield f"data: {event.to_sse()}\n\n"
-        finally:
-            agent.shutdown()
-
-    return StreamingResponse(event_stream(), media_type="text/event-stream")
-
-if __name__ == "__main__":
-    import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000)
-
-```
-
-## Command Line Interface
-
-The package includes a CLI for quick analysis from the terminal:
+Connect to external tools via the Model Context Protocol:
 
 ```bash
-# With data file
-dsagent "Analyze this dataset and create visualizations" --data ./my_data.csv
+# Add web search capability
+dsagent mcp add brave-search
 
-# Without data (code generation, research, etc.)
-dsagent "Write a Python script to scrape weather data" --model claude-3-5-sonnet-20241022
+# Use it in chat
+dsagent --mcp-config ~/.dsagent/mcp.yaml
 ```
 
-### CLI Options
+Available templates: `brave-search`, `filesystem`, `github`, `memory`, `fetch`
 
-| Option | Short | Description |
-|--------|-------|-------------|
-| `--data` | `-d` | Path to data file or directory (optional) |
-| `--model` | `-m` | LLM model to use (default: gpt-4o) |
-| `--workspace` | `-w` | Output directory (default: ./workspace) |
-| `--run-id` | | Custom run ID for this execution |
-| `--max-rounds` | `-r` | Max iterations (default: 30) |
-| `--quiet` | `-q` | Suppress verbose output |
-| `--no-stream` | | Disable streaming output |
-| `--hitl` | | HITL mode: none, plan_only, on_error, plan_and_answer, full |
-| `--mcp-config` | | Path to MCP servers YAML configuration file |
+For MCP configuration details, see [docs/MCP.md](docs/MCP.md).
 
-### CLI Examples
+## Session Management
+
+Sessions persist your conversation history and kernel state:
 
 ```bash
-# Basic analysis with data
-dsagent "Find trends and patterns" -d ./sales.csv
+# List sessions
+dsagent chat
+> /sessions
 
-# Code generation (no data needed)
-dsagent "Write a REST API client for GitHub" --model gpt-4o
+# Resume a session
+dsagent --session <session-id>
 
-# With specific model
-dsagent "Build ML model" -d ./dataset -m claude-3-sonnet-20240229
-
-# Custom output directory
-dsagent "Create charts" -d ./data -w ./output
-
-# With MCP tools (no data)
-dsagent "Search for Python best practices and summarize" --mcp-config ~/.dsagent/mcp.yaml
-
-# Quiet mode
-dsagent "Analyze" -d ./data -q
+# Export session to notebook
+> /export myanalysis.ipynb
 ```
 
-### Output Structure
+## Output Structure
 
-Each run creates an isolated workspace:
+Each run creates organized output:
+
 ```
 workspace/
-└── runs/
-    └── {run_id}/
-        ├── data/          # Input data (copied)
-        ├── notebooks/     # Generated notebooks
-        ├── artifacts/     # Images, charts, outputs
-        └── logs/
-            ├── run.log        # Human-readable log
-            └── events.jsonl   # Structured events for ML
+└── runs/{run_id}/
+    ├── data/           # Input data (copied)
+    ├── notebooks/      # Generated Jupyter notebooks
+    ├── artifacts/      # Charts, models, exports
+    └── logs/           # Execution logs
 ```
 
-## Agent Configuration
+## Documentation
 
-```python
-from dsagent import PlannerAgent, RunContext
-
-# Simple usage
-agent = PlannerAgent(
-    model="gpt-4o",           # Any LiteLLM-supported model
-    data="./my_data.csv",     # Optional: data file or directory
-    workspace="./workspace",  # Working directory
-    max_rounds=30,            # Max agent iterations
-    max_tokens=4096,          # Max tokens per response
-    temperature=0.2,          # LLM temperature
-    timeout=300,              # Code execution timeout (seconds)
-    verbose=True,             # Print to console
-    event_callback=None,      # Callback for events
-)
-
-# With run isolation (for multi-user scenarios)
-context = RunContext(workspace="./workspace")
-context.copy_data("./dataset")  # Copy data to run's data folder
-agent = PlannerAgent(model="gpt-4o", context=context)
-```
-
-### Workspace Structure
-
-When running, DSAgent creates this structure:
-```
-workspace/
-├── data/          # Input data (read from here)
-├── artifacts/     # Outputs: images, models, CSVs, reports
-├── notebooks/     # Generated Jupyter notebooks
-└── logs/          # Execution logs
-```
-
-With `RunContext`, each run gets isolated storage under `workspace/runs/{run_id}/`.
-
-## Human-in-the-Loop (HITL)
-
-Control agent autonomy with configurable HITL modes:
-
-```python
-from dsagent import PlannerAgent, HITLMode, EventType
-
-# Create agent with HITL enabled
-agent = PlannerAgent(
-    model="gpt-4o",
-    hitl=HITLMode.PLAN_ONLY,  # Pause for plan approval
-)
-agent.start()
-
-# Run with streaming to handle HITL events
-for event in agent.run_stream("Analyze sales data"):
-    if event.type == EventType.HITL_AWAITING_PLAN_APPROVAL:
-        print(f"Plan proposed:\n{event.plan.raw_text}")
-        # Approve the plan
-        agent.approve()
-        # Or reject: agent.reject("Bad plan")
-        # Or modify: agent.modify_plan("1. [ ] Better step")
-
-    elif event.type == EventType.ANSWER_ACCEPTED:
-        print(f"Answer: {event.message}")
-
-agent.shutdown()
-```
-
-### HITL Modes
-
-| Mode | Description |
-|------|-------------|
-| `HITLMode.NONE` | Fully autonomous (default) |
-| `HITLMode.PLAN_ONLY` | Pause after plan generation for approval |
-| `HITLMode.ON_ERROR` | Pause when code execution fails |
-| `HITLMode.PLAN_AND_ANSWER` | Pause on plan + before final answer |
-| `HITLMode.FULL` | Pause before every code execution |
-
-### HITL Actions
-
-```python
-# Approve current pending item
-agent.approve("Looks good!")
-
-# Reject and abort
-agent.reject("This approach won't work")
-
-# Modify the plan
-agent.modify_plan("1. [ ] New step\n2. [ ] Another step")
-
-# Modify code before execution (FULL mode)
-agent.modify_code("import pandas as pd\ndf = pd.read_csv('data.csv')")
-
-# Skip current step
-agent.skip()
-
-# Send feedback to guide the agent
-agent.send_feedback("Try using a different algorithm")
-```
-
-### HITL Events
-
-```python
-EventType.HITL_AWAITING_PLAN_APPROVAL    # Waiting for plan approval
-EventType.HITL_AWAITING_CODE_APPROVAL    # Waiting for code approval (FULL mode)
-EventType.HITL_AWAITING_ERROR_GUIDANCE   # Waiting for error guidance
-EventType.HITL_AWAITING_ANSWER_APPROVAL  # Waiting for answer approval
-EventType.HITL_FEEDBACK_RECEIVED         # Human feedback was received
-EventType.HITL_PLAN_APPROVED             # Plan was approved
-EventType.HITL_PLAN_MODIFIED             # Plan was modified
-EventType.HITL_PLAN_REJECTED             # Plan was rejected
-EventType.HITL_EXECUTION_ABORTED         # Execution was aborted
-```
-
-## MCP Tools Support
-
-DSAgent supports the [Model Context Protocol (MCP)](https://modelcontextprotocol.io/) to connect to external tool servers, enabling capabilities like web search, database queries, and more.
-
-### Installation
-
-```bash
-pip install "datascience-agent[mcp]"
-```
-
-### Configuration
-
-Create a YAML configuration file (e.g., `~/.dsagent/mcp.yaml`):
-
-```yaml
-servers:
-  # Brave Search - web search capability
-  - name: brave_search
-    transport: stdio
-    command: ["npx", "-y", "@modelcontextprotocol/server-brave-search"]
-    env:
-      BRAVE_API_KEY: "${BRAVE_API_KEY}"
-
-  # Filesystem access
-  - name: filesystem
-    transport: stdio
-    command: ["npx", "-y", "@modelcontextprotocol/server-filesystem", "/path/to/allowed/dir"]
-
-  # HTTP-based MCP server
-  - name: custom_server
-    transport: http
-    url: "http://localhost:8080/mcp"
-    enabled: false  # Disable without removing
-```
-
-### Usage
-
-#### Python API
-
-```python
-from dsagent import PlannerAgent
-
-agent = PlannerAgent(
-    model="gpt-4o",
-    mcp_config="~/.dsagent/mcp.yaml",  # Path to config
-)
-agent.start()
-
-# Agent can now use web search and other MCP tools
-for event in agent.run_stream("Search for latest AI trends and analyze them"):
-    if event.type == EventType.ANSWER_ACCEPTED:
-        print(event.message)
-
-agent.shutdown()
-```
-
-#### CLI
-
-```bash
-# Set API keys
-export BRAVE_API_KEY="your-brave-api-key"
-
-# Run with MCP tools (no data needed for web search)
-dsagent "Search for Python best practices and summarize" \
-  --mcp-config ~/.dsagent/mcp.yaml
-
-# With data
-dsagent "Search for similar datasets online and compare with mine" \
-  --data ./my_data.csv \
-  --mcp-config ~/.dsagent/mcp.yaml
-```
-
-### Environment Variables
-
-Use `${VAR_NAME}` syntax in YAML to reference environment variables:
-
-```yaml
-env:
-  API_KEY: "${MY_API_KEY}"      # Resolved from environment
-  STATIC_VALUE: "hardcoded"     # Static value
-```
-
-### Available MCP Servers
-
-Some popular MCP servers you can use:
-
-| Server | Package | Description |
-|--------|---------|-------------|
-| Brave Search | `@modelcontextprotocol/server-brave-search` | Web search via Brave API |
-| Filesystem | `@modelcontextprotocol/server-filesystem` | File system access |
-| PostgreSQL | `@modelcontextprotocol/server-postgres` | PostgreSQL database queries |
-| Puppeteer | `@modelcontextprotocol/server-puppeteer` | Browser automation |
-
-See [MCP Servers Directory](https://github.com/modelcontextprotocol/servers) for more options.
-
-## Event Types
-
-```python
-from dsagent import EventType
-
-EventType.AGENT_STARTED       # Agent started processing
-EventType.AGENT_FINISHED      # Agent finished
-EventType.AGENT_ERROR         # Error occurred
-EventType.ROUND_STARTED       # New iteration round
-EventType.ROUND_FINISHED      # Round completed
-EventType.LLM_CALL_STARTED    # LLM call started
-EventType.LLM_CALL_FINISHED   # LLM response received
-EventType.PLAN_CREATED        # Plan was created
-EventType.PLAN_UPDATED        # Plan was updated
-EventType.CODE_EXECUTING      # Code execution started
-EventType.CODE_SUCCESS        # Code execution succeeded
-EventType.CODE_FAILED         # Code execution failed
-EventType.ANSWER_ACCEPTED     # Final answer generated
-EventType.ANSWER_REJECTED     # Answer rejected (plan incomplete)
-```
-
-## Architecture
-
-```
-dsagent/
-├── agents/
-│   └── base.py          # PlannerAgent - main user interface
-├── core/
-│   ├── context.py       # RunContext - workspace management
-│   ├── engine.py        # AgentEngine - main loop
-│   ├── executor.py      # JupyterExecutor - code execution
-│   ├── hitl.py          # HITLGateway - human-in-the-loop
-│   └── planner.py       # PlanParser - response parsing
-├── tools/
-│   ├── config.py        # MCP configuration models
-│   └── mcp_manager.py   # MCPManager - MCP server connections
-├── schema/
-│   └── models.py        # Pydantic models
-└── utils/
-    ├── logger.py        # AgentLogger - console logging
-    ├── run_logger.py    # RunLogger - comprehensive logging
-    └── notebook.py      # NotebookBuilder - notebook generation
-```
+- [CLI Reference](docs/CLI.md) - Complete command-line options
+- [Python API](docs/PYTHON_API.md) - Detailed API documentation
+- [Model Configuration](docs/MODELS.md) - LLM provider setup
+- [MCP Tools](docs/MCP.md) - External tools integration
 
 ## License
 
