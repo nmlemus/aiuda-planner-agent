@@ -1,0 +1,330 @@
+"""Rich rendering utilities for CLI output."""
+
+from __future__ import annotations
+
+from typing import Any, Dict, List, Optional
+
+from rich.console import Console
+from rich.markdown import Markdown
+from rich.panel import Panel
+from rich.syntax import Syntax
+from rich.table import Table
+from rich.text import Text
+from rich.tree import Tree
+
+
+class CLIRenderer:
+    """Renderer for CLI output using Rich."""
+
+    def __init__(self, console: Optional[Console] = None):
+        self.console = console or Console()
+
+    def render_code(
+        self,
+        code: str,
+        language: str = "python",
+        title: Optional[str] = None,
+        line_numbers: bool = True,
+    ) -> None:
+        """Render code with syntax highlighting."""
+        syntax = Syntax(
+            code,
+            language,
+            theme="monokai",
+            line_numbers=line_numbers,
+            word_wrap=True,
+        )
+
+        if title:
+            self.console.print(Panel(syntax, title=title, border_style="cyan"))
+        else:
+            self.console.print(syntax)
+
+    def render_output(
+        self,
+        output: str,
+        success: bool = True,
+        title: Optional[str] = None,
+    ) -> None:
+        """Render execution output."""
+        style = "green" if success else "red"
+        title = title or ("Output" if success else "Error")
+
+        self.console.print(
+            Panel(
+                Text(output, style="white" if success else "red"),
+                title=f"[{style}]{title}[/{style}]",
+                border_style=style,
+            )
+        )
+
+    def render_dataframe_info(
+        self,
+        name: str,
+        shape: tuple,
+        columns: List[str],
+        dtypes: Optional[Dict[str, str]] = None,
+        sample_data: Optional[List[List[Any]]] = None,
+    ) -> None:
+        """Render DataFrame information."""
+        table = Table(
+            title=f"DataFrame: {name}",
+            show_header=True,
+            header_style="bold cyan",
+        )
+
+        # Add columns
+        for col in columns[:10]:  # Limit to 10 columns
+            dtype_str = f" ({dtypes.get(col, 'unknown')})" if dtypes else ""
+            table.add_column(f"{col}{dtype_str}")
+
+        if len(columns) > 10:
+            table.add_column(f"... +{len(columns) - 10} more")
+
+        # Add sample data if provided
+        if sample_data:
+            for row in sample_data[:5]:  # Limit to 5 rows
+                str_row = [str(v)[:20] for v in row[:10]]
+                if len(row) > 10:
+                    str_row.append("...")
+                table.add_row(*str_row)
+
+        self.console.print(table)
+        self.console.print(f"[dim]Shape: {shape[0]} rows x {shape[1]} columns[/dim]")
+
+    def render_variables(
+        self,
+        variables: Dict[str, str],
+        dataframes: Optional[Dict[str, Dict]] = None,
+    ) -> None:
+        """Render variable list."""
+        if not variables:
+            self.console.print("[dim]No variables defined[/dim]")
+            return
+
+        tree = Tree("[bold]Kernel Variables[/bold]")
+
+        # Group by type
+        dataframe_vars = []
+        other_vars = []
+
+        for name, type_name in variables.items():
+            if dataframes and name in dataframes:
+                dataframe_vars.append((name, dataframes[name]))
+            else:
+                other_vars.append((name, type_name))
+
+        # DataFrames section
+        if dataframe_vars:
+            df_branch = tree.add("[cyan]DataFrames[/cyan]")
+            for name, info in dataframe_vars:
+                shape = info.get("shape", [0, 0])
+                cols = info.get("columns", [])[:3]
+                cols_str = ", ".join(cols)
+                if len(info.get("columns", [])) > 3:
+                    cols_str += "..."
+                df_branch.add(
+                    f"[green]{name}[/green]: {shape[0]}x{shape[1]} [{cols_str}]"
+                )
+
+        # Other variables section
+        if other_vars:
+            var_branch = tree.add("[yellow]Variables[/yellow]")
+            for name, type_name in other_vars:
+                var_branch.add(f"[white]{name}[/white]: {type_name}")
+
+        self.console.print(tree)
+
+    def render_plan(
+        self,
+        steps: List[Dict[str, Any]],
+        current_step: Optional[int] = None,
+    ) -> None:
+        """Render execution plan."""
+        table = Table(
+            title="Execution Plan",
+            show_header=True,
+            header_style="bold cyan",
+        )
+
+        table.add_column("#", style="dim", width=3)
+        table.add_column("Status", width=6)
+        table.add_column("Step")
+
+        for step in steps:
+            num = step.get("number", 0)
+            completed = step.get("completed", False)
+            description = step.get("description", "")
+
+            if completed:
+                status = "[green]Done[/green]"
+            elif current_step and num == current_step:
+                status = "[yellow]>>>[/yellow]"
+            else:
+                status = "[dim]...[/dim]"
+
+            table.add_row(str(num), status, description)
+
+        self.console.print(table)
+
+    def render_session_list(
+        self,
+        sessions: List[Dict[str, Any]],
+        current_id: Optional[str] = None,
+    ) -> None:
+        """Render session list."""
+        if not sessions:
+            self.console.print("[dim]No sessions found[/dim]")
+            return
+
+        table = Table(
+            title="Sessions",
+            show_header=True,
+            header_style="bold cyan",
+        )
+
+        table.add_column("", width=2)
+        table.add_column("Name", min_width=20)
+        table.add_column("ID", width=10)
+        table.add_column("Messages", width=8)
+        table.add_column("Updated", width=12)
+        table.add_column("Status", width=10)
+
+        for s in sessions:
+            is_current = current_id and s["id"] == current_id
+            marker = "[cyan]*[/cyan]" if is_current else ""
+
+            status_colors = {
+                "active": "green",
+                "paused": "yellow",
+                "completed": "blue",
+                "archived": "dim",
+                "error": "red",
+            }
+            status_color = status_colors.get(s["status"], "white")
+
+            # Parse and format date
+            updated = s.get("updated_at", "")[:10]
+
+            table.add_row(
+                marker,
+                s.get("name", "Unnamed")[:25],
+                s["id"][:8],
+                str(s.get("message_count", 0)),
+                updated,
+                f"[{status_color}]{s['status']}[/{status_color}]",
+            )
+
+        self.console.print(table)
+
+    def render_thinking(self, content: str) -> None:
+        """Render agent thinking/reasoning."""
+        self.console.print(
+            Panel(
+                Text(content, style="italic dim"),
+                title="[dim]Thinking[/dim]",
+                border_style="dim",
+            )
+        )
+
+    def render_assistant_message(
+        self,
+        content: str,
+        code: Optional[str] = None,
+    ) -> None:
+        """Render assistant response."""
+        # Check if content contains markdown code blocks
+        if "```" in content:
+            self.console.print(
+                Panel(
+                    Markdown(content),
+                    title="[cyan]Assistant[/cyan]",
+                    border_style="cyan",
+                )
+            )
+        else:
+            self.console.print(
+                Panel(
+                    Text(content),
+                    title="[cyan]Assistant[/cyan]",
+                    border_style="cyan",
+                )
+            )
+
+        if code:
+            self.render_code(code, title="Code to execute")
+
+    def render_user_message(self, content: str) -> None:
+        """Render user message (for history display)."""
+        self.console.print(
+            Panel(
+                Text(content),
+                title="[green]You[/green]",
+                border_style="green",
+            )
+        )
+
+    def render_execution_result(
+        self,
+        code: str,
+        output: str,
+        success: bool,
+        execution_time: Optional[float] = None,
+        images: Optional[List[Dict]] = None,
+    ) -> None:
+        """Render code execution result."""
+        # Show code
+        self.render_code(code, title="Executed")
+
+        # Show output
+        title = "Output"
+        if execution_time:
+            title += f" ({execution_time:.2f}s)"
+
+        self.render_output(output, success=success, title=title)
+
+        # Show images indicator
+        if images:
+            self.console.print(
+                f"[dim]Generated {len(images)} image(s) - see artifacts folder[/dim]"
+            )
+
+    def render_error(self, message: str, title: str = "Error") -> None:
+        """Render error message."""
+        self.console.print(
+            Panel(
+                Text(message, style="red"),
+                title=f"[red]{title}[/red]",
+                border_style="red",
+            )
+        )
+
+    def render_success(self, message: str, title: str = "Success") -> None:
+        """Render success message."""
+        self.console.print(
+            Panel(
+                Text(message, style="green"),
+                title=f"[green]{title}[/green]",
+                border_style="green",
+            )
+        )
+
+    def render_info(self, message: str, title: str = "Info") -> None:
+        """Render info message."""
+        self.console.print(
+            Panel(
+                Text(message),
+                title=f"[cyan]{title}[/cyan]",
+                border_style="cyan",
+            )
+        )
+
+    def render_warning(self, message: str, title: str = "Warning") -> None:
+        """Render warning message."""
+        self.console.print(
+            Panel(
+                Text(message, style="yellow"),
+                title=f"[yellow]{title}[/yellow]",
+                border_style="yellow",
+            )
+        )

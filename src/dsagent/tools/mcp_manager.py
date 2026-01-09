@@ -5,6 +5,7 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
+import os
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Union
@@ -191,14 +192,16 @@ class MCPManager:
         if not config.command:
             raise ValueError(f"No command specified for stdio server: {config.name}")
 
-        # Resolve environment variables
-        env = config.resolve_env()
+        # Resolve environment variables from config and merge with current environment
+        # This ensures .env variables are passed to the subprocess
+        config_env = config.resolve_env()
+        env = {**os.environ, **config_env} if config_env else None
 
         # Create server parameters
         params = StdioServerParameters(
             command=config.command[0],
             args=config.command[1:] if len(config.command) > 1 else [],
-            env=env if env else None,
+            env=env,
         )
 
         # Create stdio client context manager

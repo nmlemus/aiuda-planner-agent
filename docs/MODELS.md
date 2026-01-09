@@ -20,10 +20,10 @@ No additional configuration required for most providers.
 export OPENAI_API_KEY="sk-..."
 
 # Use any OpenAI model
-dsagent "Your task" --model gpt-4o
-dsagent "Your task" --model gpt-4o-mini
-dsagent "Your task" --model o1
-dsagent "Your task" --model o3-mini
+dsagent run "Your task" --model gpt-4o
+dsagent run "Your task" --model gpt-4o-mini
+dsagent run "Your task" --model o1
+dsagent run "Your task" --model o3-mini
 ```
 
 **Available models:** `gpt-4o`, `gpt-4o-mini`, `gpt-4-turbo`, `o1`, `o1-mini`, `o3-mini`
@@ -35,13 +35,13 @@ dsagent "Your task" --model o3-mini
 export ANTHROPIC_API_KEY="sk-ant-..."
 
 # Use any Claude model
-dsagent "Your task" --model claude-opus-4
-dsagent "Your task" --model claude-3.7-sonnet
-dsagent "Your task" --model claude-3.5-sonnet
-dsagent "Your task" --model claude-haiku-4.5
+dsagent run "Your task" --model claude-opus-4
+dsagent run "Your task" --model claude-sonnet-4-5
+dsagent run "Your task" --model claude-3-5-sonnet
+dsagent run "Your task" --model claude-haiku-4-5
 ```
 
-**Available models:** `claude-opus-4`, `claude-opus-4.1`, `claude-3.7-sonnet`, `claude-3.5-sonnet`, `claude-3.5-haiku`, `claude-haiku-4.5`
+**Available models:** `claude-opus-4`, `claude-sonnet-4-5`, `claude-3-5-sonnet`, `claude-haiku-4-5`
 
 ### Google (Gemini)
 
@@ -50,9 +50,9 @@ dsagent "Your task" --model claude-haiku-4.5
 export GOOGLE_API_KEY="..."
 
 # Use any Gemini model
-dsagent "Your task" --model gemini-2.5-pro
-dsagent "Your task" --model gemini-2.5-flash
-dsagent "Your task" --model gemini-2.0-flash
+dsagent run "Your task" --model gemini-2.5-pro
+dsagent run "Your task" --model gemini-2.5-flash
+dsagent run "Your task" --model gemini-2.0-flash
 ```
 
 **Available models:** `gemini-2.5-pro`, `gemini-2.5-flash`, `gemini-2.0-flash`, `gemini-1.5-pro`
@@ -64,8 +64,8 @@ dsagent "Your task" --model gemini-2.0-flash
 export DEEPSEEK_API_KEY="..."
 
 # Use DeepSeek models
-dsagent "Your task" --model deepseek/deepseek-chat
-dsagent "Your task" --model deepseek/deepseek-r1
+dsagent run "Your task" --model deepseek/deepseek-chat
+dsagent run "Your task" --model deepseek/deepseek-r1
 ```
 
 **Available models:** `deepseek/deepseek-chat`, `deepseek/deepseek-r1`, `deepseek/deepseek-r1-distill-llama-70b`
@@ -79,7 +79,7 @@ export AZURE_API_BASE="https://your-resource.openai.azure.com/"
 export AZURE_API_VERSION="2024-02-15-preview"
 
 # Use with azure/ prefix
-dsagent "Your task" --model azure/your-deployment-name
+dsagent run "Your task" --model azure/your-deployment-name
 ```
 
 ## Local Models
@@ -112,9 +112,9 @@ ollama pull codestral
 
 ```bash
 # Use with ollama/ prefix
-dsagent "Your task" --model ollama/llama3.2
-dsagent "Your task" --model ollama/deepseek-r1:14b
-dsagent "Your task" --model ollama/qwen2.5-coder
+dsagent run "Your task" --model ollama/llama3.2
+dsagent run "Your task" --model ollama/deepseek-r1:14b
+dsagent run "Your task" --model ollama/qwen2.5-coder
 ```
 
 **Custom host/port:**
@@ -122,7 +122,7 @@ dsagent "Your task" --model ollama/qwen2.5-coder
 ```bash
 # If Ollama runs on a different machine
 export OLLAMA_API_BASE="http://192.168.1.100:11434"
-dsagent "Your task" --model ollama/llama3.2
+dsagent run "Your task" --model ollama/llama3.2
 ```
 
 **Recommended models for data science:**
@@ -149,7 +149,7 @@ export OPENAI_API_BASE="http://localhost:1234/v1"
 export OPENAI_API_KEY="not-needed"  # Required by LiteLLM but ignored by LM Studio
 
 # Use with openai/ prefix
-dsagent "Your task" --model openai/local-model
+dsagent run "Your task" --model openai/local-model
 ```
 
 **Note:** The model name after `openai/` doesn't matter much - LM Studio uses whatever model you have loaded.
@@ -162,7 +162,7 @@ Any API that follows the OpenAI format can be used:
 export OPENAI_API_BASE="https://your-api-endpoint.com/v1"
 export OPENAI_API_KEY="your-api-key"
 
-dsagent "Your task" --model openai/model-name
+dsagent run "Your task" --model openai/model-name
 ```
 
 ## Python SDK
@@ -238,12 +238,12 @@ DSAgent validates model names before starting. If you see an error like "gpt-5 d
 
 ```bash
 # Wrong
-dsagent "task" --model gpt4o      # Missing dash
-dsagent "task" --model gpt-5      # Doesn't exist
+dsagent run "task" --model gpt4o      # Missing dash
+dsagent run "task" --model gpt-5      # Doesn't exist
 
 # Correct
-dsagent "task" --model gpt-4o
-dsagent "task" --model gpt-4-turbo
+dsagent run "task" --model gpt-4o
+dsagent run "task" --model gpt-4-turbo
 ```
 
 ## More Information

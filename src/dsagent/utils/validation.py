@@ -12,22 +12,72 @@ class ConfigurationError(Exception):
     pass
 
 
+def is_using_proxy() -> bool:
+    """Check if LLM_API_BASE proxy is configured."""
+    return bool(os.getenv("LLM_API_BASE"))
+
+
 def apply_llm_api_base(model: str) -> None:
-    """Map LLM_API_BASE to provider-specific base env vars when appropriate."""
+    """Set OPENAI_API_BASE when using a LiteLLM proxy.
+
+    When LLM_API_BASE is set (e.g., LiteLLM proxy), all models route through
+    OPENAI_API_BASE since the proxy provides an OpenAI-compatible API.
+
+    When LLM_API_BASE is NOT set, models use their native SDKs directly
+    (Anthropic SDK for Claude, etc.) with their respective API keys.
+    """
     api_base = os.getenv("LLM_API_BASE")
     if not api_base:
         return
 
+    # When using a proxy, ALL models go through OPENAI_API_BASE
+    # The proxy handles routing to the actual provider
+    if not os.getenv("OPENAI_API_BASE"):
+        os.environ["OPENAI_API_BASE"] = api_base
+
+
+def get_proxy_model_name(model: str) -> str:
+    """Transform model name for proxy usage.
+
+    When using LLM_API_BASE (a LiteLLM proxy), non-OpenAI models need
+    the 'openai/' prefix to force LiteLLM to use the OpenAI SDK instead
+    of native provider SDKs.
+
+    Args:
+        model: Original model name (e.g., 'claude-sonnet-4-5')
+
+    Returns:
+        Transformed model name for proxy (e.g., 'openai/claude-sonnet-4-5')
+        or original name if no proxy is configured.
+    """
+    if not is_using_proxy():
+        return model  # No proxy, use native SDKs
+
     model_lower = model.lower()
-    target_env = None
 
+    # Already has openai/ prefix - ready for proxy
+    if model_lower.startswith("openai/"):
+        return model
+
+    # Local models don't go through proxy
+    if model_lower.startswith(("ollama/", "ollama_chat/", "local/")):
+        return model
+
+    # Azure has its own handling
     if model_lower.startswith("azure/"):
-        target_env = "AZURE_API_BASE"
-    elif model_lower.startswith(("gpt-", "o1", "o3", "openai/")):
-        target_env = "OPENAI_API_BASE"
+        return model
 
-    if target_env and not os.getenv(target_env):
-        os.environ[target_env] = api_base
+    # OpenAI models (gpt-*, o1*, o3*) work directly with OPENAI_API_BASE
+    if model_lower.startswith(("gpt-", "o1", "o3")):
+        return model
+
+    # For all other models (Claude, Gemini, DeepSeek, etc.),
+    # prefix with openai/ to force OpenAI SDK through proxy
+    # Remove existing provider prefix if present (e.g., anthropic/claude -> claude)
+    if "/" in model:
+        model = model.split("/", 1)[1]
+
+    return f"openai/{model}"
 
 
 # Mapping of model prefixes to required environment variables
@@ -76,12 +126,38 @@ def get_provider_for_model(model: str) -> Tuple[str, Optional[str]]:
 def validate_api_key(model: str) -> None:
     """Validate that the required API key exists for the given model.
 
+    When using a LiteLLM proxy (LLM_API_BASE is set), all non-local models
+    require OPENAI_API_KEY since they route through the OpenAI-compatible proxy.
+
+    When not using a proxy, models require their native provider keys
+    (ANTHROPIC_API_KEY for Claude, etc.).
+
     Args:
         model: The model name/identifier
 
     Raises:
         ConfigurationError: If the required API key is not set
     """
+    model_lower = model.lower()
+
+    # Local models never need API keys
+    if model_lower.startswith(("ollama/", "ollama_chat/", "local/")):
+        return
+
+    # When using proxy, all models need OPENAI_API_KEY
+    if is_using_proxy():
+        api_key = os.getenv("OPENAI_API_KEY")
+        if not api_key:
+            raise ConfigurationError(
+                f"Using LiteLLM proxy (LLM_API_BASE is set) requires OPENAI_API_KEY.\n\n"
+                f"Set it using one of these methods:\n"
+                f"  1. Environment variable: export OPENAI_API_KEY='your-proxy-key'\n"
+                f"  2. .env file: Add OPENAI_API_KEY=your-proxy-key to your .env file\n\n"
+                f"This key authenticates with your LiteLLM proxy, not directly with providers."
+            )
+        return
+
+    # Not using proxy - need native provider key
     provider, env_var = get_provider_for_model(model)
 
     # No key required for local models
@@ -96,17 +172,9 @@ def validate_api_key(model: str) -> None:
             f"Set it using one of these methods:\n"
             f"  1. Environment variable: export {env_var}='your-api-key'\n"
             f"  2. .env file: Add {env_var}=your-api-key to your .env file\n\n"
+            f"Alternatively, set up a LiteLLM proxy and configure LLM_API_BASE.\n"
             f"See .env.example for configuration options."
         )
-
-    # Basic validation of key format
-    if env_var == "OPENAI_API_KEY" and not api_key.startswith("sk-"):
-        # Note: This is a soft warning, not an error, as key formats may change
-        pass
-
-    if env_var == "ANTHROPIC_API_KEY" and not api_key.startswith("sk-ant-"):
-        # Note: This is a soft warning, not an error
-        pass
 
 
 def validate_model_name(model: str) -> None:
