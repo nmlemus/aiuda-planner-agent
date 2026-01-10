@@ -45,7 +45,7 @@ class ServerSettings(BaseSettings):
 
     # Session storage
     session_backend: str = "sqlite"  # "sqlite" or "json"
-    sessions_dir: str = "runs"
+    sessions_dir: str = "workspace"  # Same as CLI default
 
 
 @lru_cache

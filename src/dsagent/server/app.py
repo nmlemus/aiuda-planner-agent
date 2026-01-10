@@ -106,7 +106,9 @@ def create_app(
 
     if include_routes:
         # Import and include routers
+        from dsagent.server.routes.artifacts import router as artifacts_router
         from dsagent.server.routes.chat import router as chat_router
+        from dsagent.server.routes.files import router as files_router
         from dsagent.server.routes.health import router as health_router
         from dsagent.server.routes.kernel import router as kernel_router
         from dsagent.server.routes.sessions import router as sessions_router
@@ -119,6 +121,8 @@ def create_app(
         app.include_router(sessions_router, prefix="/api", tags=["Sessions"])
         app.include_router(chat_router, prefix="/api", tags=["Chat"])
         app.include_router(kernel_router, prefix="/api", tags=["Kernel"])
+        app.include_router(files_router, prefix="/api", tags=["Files"])
+        app.include_router(artifacts_router, prefix="/api", tags=["Artifacts"])
 
         # WebSocket route
         app.include_router(websocket_router, tags=["WebSocket"])
