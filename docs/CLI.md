@@ -175,7 +175,15 @@ dsagent init [--force]
 
 1. **LLM Provider**: Choose from OpenAI, Anthropic, local (Ollama), or LiteLLM proxy
 2. **API Keys**: Securely store in `~/.dsagent/.env`
-3. **MCP Tools**: Optionally configure web search, filesystem access, etc.
+3. **Default Model**: Automatically selected based on provider:
+   - OpenAI → `gpt-4o`
+   - Anthropic → `claude-sonnet-4-5`
+   - Local → `ollama/llama3`
+4. **MCP Tools**: Optionally configure web search, filesystem access, etc.
+
+To use a different model after setup, either:
+- Edit `LLM_MODEL` in `~/.dsagent/.env`
+- Use the `--model` flag: `dsagent --model gpt-4o-mini`
 
 ### Example
 

@@ -59,7 +59,16 @@ dsagent init
 This will:
 - Ask for your LLM provider (OpenAI, Anthropic, local, etc.)
 - Store your API key securely in `~/.dsagent/.env`
+- Automatically select a default model based on provider:
+  - OpenAI → `gpt-4o`
+  - Anthropic → `claude-sonnet-4-5`
+  - Local → `ollama/llama3`
 - Optionally configure MCP tools (web search, etc.)
+
+To use a different model, edit `~/.dsagent/.env` or use the `--model` flag:
+```bash
+dsagent --model gpt-4o-mini
+```
 
 ### 2. Start Chatting
 
