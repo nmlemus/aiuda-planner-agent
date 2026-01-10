@@ -18,22 +18,26 @@ def is_using_proxy() -> bool:
 
 
 def apply_llm_api_base(model: str) -> None:
-    """Set OPENAI_API_BASE when using a LiteLLM proxy.
+    """Set API base URLs for LLM providers.
 
     When LLM_API_BASE is set (e.g., LiteLLM proxy), all models route through
     OPENAI_API_BASE since the proxy provides an OpenAI-compatible API.
 
-    When LLM_API_BASE is NOT set, models use their native SDKs directly
-    (Anthropic SDK for Claude, etc.) with their respective API keys.
+    When LLM_API_BASE is NOT set, models use their native SDKs directly.
+    For OpenAI models, we explicitly set the default API base to ensure
+    compatibility across different LiteLLM versions.
     """
-    api_base = os.getenv("LLM_API_BASE")
-    if not api_base:
+    # When using a proxy, ALL models go through OPENAI_API_BASE
+    if is_using_proxy():
+        if not os.getenv("OPENAI_API_BASE"):
+            os.environ["OPENAI_API_BASE"] = os.getenv("LLM_API_BASE")
         return
 
-    # When using a proxy, ALL models go through OPENAI_API_BASE
-    # The proxy handles routing to the actual provider
-    if not os.getenv("OPENAI_API_BASE"):
-        os.environ["OPENAI_API_BASE"] = api_base
+    # Set default API base for OpenAI models (needed for some LiteLLM versions)
+    model_lower = model.lower()
+    if model_lower.startswith(("gpt-", "o1", "o3")):
+        if not os.getenv("OPENAI_API_BASE"):
+            os.environ["OPENAI_API_BASE"] = "https://api.openai.com/v1"
 
 
 def get_proxy_model_name(model: str) -> str:
