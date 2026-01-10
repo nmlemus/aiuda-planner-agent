@@ -5,6 +5,7 @@ Provides subcommands:
 - dsagent run      : One-shot task execution
 - dsagent init     : Setup wizard
 - dsagent mcp      : MCP server management
+- dsagent serve    : Run API server (REST + WebSocket)
 """
 
 from __future__ import annotations
@@ -52,6 +53,28 @@ def cmd_mcp(args: argparse.Namespace) -> int:
     return run_mcp(args)
 
 
+def cmd_serve(args: argparse.Namespace) -> int:
+    """Run the API server."""
+    try:
+        from dsagent.server.app import run_server
+    except ImportError:
+        print("Error: API dependencies not installed.", file=sys.stderr)
+        print("Install with: pip install datascience-agent[api]", file=sys.stderr)
+        return 1
+
+    print(f"Starting DSAgent API Server on {args.host}:{args.port}")
+    if args.reload:
+        print("  Auto-reload enabled (development mode)")
+
+    run_server(
+        host=args.host,
+        port=args.port,
+        reload=args.reload,
+        log_level=args.log_level,
+    )
+    return 0
+
+
 def create_parser() -> argparse.ArgumentParser:
     """Create the main argument parser with subcommands."""
     parser = argparse.ArgumentParser(
@@ -66,6 +89,7 @@ Examples:
   dsagent run "Analyze sales.csv"  # One-shot task
   dsagent init                     # Setup wizard
   dsagent mcp add brave-search     # Add MCP server
+  dsagent serve --port 8000        # Start API server
 
 For more info on a command:
   dsagent <command> --help
@@ -243,6 +267,56 @@ Commands:
     mcp_remove.set_defaults(mcp_action="remove")
 
     mcp_parser.set_defaults(func=cmd_mcp)
+
+    # ========== serve subcommand ==========
+    serve_parser = subparsers.add_parser(
+        "serve",
+        help="Run the API server (REST + WebSocket)",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog="""
+Examples:
+  dsagent serve                    # Start server on 0.0.0.0:8000
+  dsagent serve --port 3000        # Custom port
+  dsagent serve --reload           # Enable auto-reload (dev mode)
+  dsagent serve --host 127.0.0.1   # Localhost only
+
+Environment variables:
+  DSAGENT_API_KEY     : Enable API key authentication
+  DSAGENT_CORS_ORIGINS: Comma-separated allowed origins (default: *)
+
+API Endpoints:
+  GET  /health                    : Health check
+  POST /api/sessions              : Create session
+  GET  /api/sessions              : List sessions
+  POST /api/sessions/{id}/chat    : Send message
+  WS   /ws/chat/{session_id}      : WebSocket chat
+        """,
+    )
+    serve_parser.add_argument(
+        "--host",
+        type=str,
+        default="0.0.0.0",
+        help="Host to bind to (default: 0.0.0.0)",
+    )
+    serve_parser.add_argument(
+        "--port", "-p",
+        type=int,
+        default=8000,
+        help="Port to listen on (default: 8000)",
+    )
+    serve_parser.add_argument(
+        "--reload",
+        action="store_true",
+        help="Enable auto-reload for development",
+    )
+    serve_parser.add_argument(
+        "--log-level",
+        type=str,
+        choices=["debug", "info", "warning", "error"],
+        default="info",
+        help="Logging level (default: info)",
+    )
+    serve_parser.set_defaults(func=cmd_serve)
 
     return parser
 

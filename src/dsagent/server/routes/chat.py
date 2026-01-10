@@ -1,0 +1,266 @@
+"""Chat endpoints."""
+
+from __future__ import annotations
+
+import asyncio
+import json
+from datetime import datetime
+from typing import TYPE_CHECKING, Optional
+
+from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi.responses import StreamingResponse
+
+from dsagent.server.deps import (
+    get_connection_manager,
+    get_session_manager,
+    verify_api_key,
+)
+from dsagent.server.manager import AgentConnectionManager
+from dsagent.server.models import (
+    ChatRequest,
+    ChatResponseModel,
+    ErrorResponse,
+    ExecutionResultResponse,
+    MessageResponse,
+    MessagesResponse,
+    PlanResponse,
+    PlanStepResponse,
+)
+from dsagent.session import SessionManager
+
+if TYPE_CHECKING:
+    from dsagent.agents.conversational import ChatResponse
+
+router = APIRouter(dependencies=[Depends(verify_api_key)])
+
+
+def _convert_chat_response(response: "ChatResponse") -> ChatResponseModel:
+    """Convert agent ChatResponse to API ChatResponseModel."""
+    # Convert execution result
+    execution_result = None
+    if response.execution_result:
+        execution_result = ExecutionResultResponse(
+            stdout=response.execution_result.stdout,
+            stderr=response.execution_result.stderr,
+            error=response.execution_result.error,
+            images=response.execution_result.images,
+            success=response.execution_result.success,
+        )
+
+    # Convert plan
+    plan = None
+    if response.plan:
+        steps = []
+        if hasattr(response.plan, "steps"):
+            for step in response.plan.steps:
+                steps.append(
+                    PlanStepResponse(
+                        number=step.number,
+                        description=step.description,
+                        completed=step.completed,
+                    )
+                )
+        plan = PlanResponse(
+            steps=steps,
+            raw_text=getattr(response.plan, "raw_text", ""),
+            total_steps=getattr(response.plan, "total_steps", len(steps)),
+            completed_steps=getattr(response.plan, "completed_steps", 0),
+            is_complete=getattr(response.plan, "is_complete", False),
+        )
+
+    return ChatResponseModel(
+        content=response.content,
+        code=response.code,
+        execution_result=execution_result,
+        plan=plan,
+        has_answer=response.has_answer,
+        answer=response.answer,
+        thinking=response.thinking,
+        is_complete=response.is_complete,
+    )
+
+
+@router.post(
+    "/sessions/{session_id}/chat",
+    response_model=ChatResponseModel,
+    responses={404: {"model": ErrorResponse}},
+)
+async def chat(
+    session_id: str,
+    request: ChatRequest,
+    connection_manager: AgentConnectionManager = Depends(get_connection_manager),
+    session_manager: SessionManager = Depends(get_session_manager),
+) -> ChatResponseModel:
+    """Send a chat message and get the response.
+
+    This is a synchronous endpoint that waits for the full response.
+    For streaming responses, use /sessions/{id}/chat/stream.
+
+    Args:
+        session_id: Session ID
+        request: Chat message
+        connection_manager: Connection manager instance
+        session_manager: Session manager instance
+
+    Returns:
+        Chat response
+
+    Raises:
+        HTTPException: If session not found or agent error
+    """
+    # Check session exists
+    if session_manager.load_session(session_id) is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Session {session_id} not found",
+        )
+
+    # Get or create agent
+    agent = await connection_manager.get_or_create_agent(session_id)
+
+    try:
+        # Run chat in thread pool (blocking operation)
+        response = await asyncio.to_thread(agent.chat, request.message)
+        return _convert_chat_response(response)
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Chat error: {str(e)}",
+        )
+
+
+@router.post(
+    "/sessions/{session_id}/chat/stream",
+    responses={404: {"model": ErrorResponse}},
+)
+async def chat_stream(
+    session_id: str,
+    request: ChatRequest,
+    connection_manager: AgentConnectionManager = Depends(get_connection_manager),
+    session_manager: SessionManager = Depends(get_session_manager),
+) -> StreamingResponse:
+    """Send a chat message and stream the response via SSE.
+
+    Server-Sent Events format:
+    - event: response
+    - data: JSON with ChatResponseModel fields
+
+    Args:
+        session_id: Session ID
+        request: Chat message
+        connection_manager: Connection manager instance
+        session_manager: Session manager instance
+
+    Returns:
+        Streaming response with SSE events
+
+    Raises:
+        HTTPException: If session not found
+    """
+    # Check session exists
+    if session_manager.load_session(session_id) is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Session {session_id} not found",
+        )
+
+    # Get or create agent
+    agent = await connection_manager.get_or_create_agent(session_id)
+
+    async def generate_events():
+        """Generate SSE events from chat stream."""
+        try:
+            # Get response generator in thread pool
+            response_gen = await asyncio.to_thread(agent.chat_stream, request.message)
+
+            # Iterate over responses
+            for response in response_gen:
+                api_response = _convert_chat_response(response)
+                data = api_response.model_dump_json()
+                yield f"event: response\ndata: {data}\n\n"
+
+            # Send done event
+            yield f"event: done\ndata: {{}}\n\n"
+
+        except Exception as e:
+            error_data = json.dumps({"error": str(e)})
+            yield f"event: error\ndata: {error_data}\n\n"
+
+    return StreamingResponse(
+        generate_events(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no",
+        },
+    )
+
+
+@router.get(
+    "/sessions/{session_id}/messages",
+    response_model=MessagesResponse,
+    responses={404: {"model": ErrorResponse}},
+)
+async def get_messages(
+    session_id: str,
+    limit: int = Query(50, ge=1, le=200),
+    offset: int = Query(0, ge=0),
+    role: Optional[str] = Query(None),
+    session_manager: SessionManager = Depends(get_session_manager),
+) -> MessagesResponse:
+    """Get conversation history for a session.
+
+    Args:
+        session_id: Session ID
+        limit: Maximum number of messages to return
+        offset: Number of messages to skip
+        role: Optional role filter (user, assistant, execution, system)
+        session_manager: Session manager instance
+
+    Returns:
+        List of messages
+
+    Raises:
+        HTTPException: If session not found
+    """
+    session = session_manager.load_session(session_id)
+
+    if session is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Session {session_id} not found",
+        )
+
+    # Get messages from history
+    all_messages = session.history.messages if session.history else []
+
+    # Filter by role if specified
+    if role:
+        all_messages = [m for m in all_messages if m.role.value == role]
+
+    # Calculate total and pagination
+    total = len(all_messages)
+    has_more = offset + limit < total
+
+    # Apply pagination
+    messages = all_messages[offset : offset + limit]
+
+    # Convert to response format
+    message_responses = []
+    for msg in messages:
+        message_responses.append(
+            MessageResponse(
+                id=str(msg.id),
+                role=msg.role.value if hasattr(msg.role, "value") else str(msg.role),
+                content=msg.content,
+                timestamp=msg.timestamp,
+                metadata=msg.metadata or {},
+            )
+        )
+
+    return MessagesResponse(
+        messages=message_responses,
+        total=total,
+        has_more=has_more,
+    )
