@@ -126,8 +126,8 @@ Examples:
     chat_parser.add_argument(
         "--workspace", "-w",
         type=str,
-        default="./workspace",
-        help="Workspace directory (default: ./workspace)",
+        default=os.getenv("DSAGENT_WORKSPACE", "./workspace"),
+        help="Workspace directory (default: ./workspace or $DSAGENT_WORKSPACE)",
     )
     chat_parser.add_argument(
         "--session", "-s",
@@ -192,8 +192,8 @@ Examples:
     run_parser.add_argument(
         "--workspace", "-w",
         type=str,
-        default="./workspace",
-        help="Workspace directory (default: ./workspace)",
+        default=os.getenv("DSAGENT_WORKSPACE", "./workspace"),
+        help="Workspace directory (default: ./workspace or $DSAGENT_WORKSPACE)",
     )
     run_parser.add_argument(
         "--max-rounds", "-r",

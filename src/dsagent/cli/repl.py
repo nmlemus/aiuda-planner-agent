@@ -587,8 +587,8 @@ Live Notebook:
     parser.add_argument(
         "--workspace", "-w",
         type=str,
-        default="./workspace",
-        help="Workspace directory (default: ./workspace)",
+        default=os.getenv("DSAGENT_WORKSPACE", "./workspace"),
+        help="Workspace directory (default: ./workspace or $DSAGENT_WORKSPACE)",
     )
 
     parser.add_argument(
