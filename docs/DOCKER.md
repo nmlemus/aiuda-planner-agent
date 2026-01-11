@@ -57,11 +57,20 @@ docker run -it \
 | Variable | Description | Default |
 |----------|-------------|---------|
 | `LLM_MODEL` | LLM model to use | `gpt-4o` |
-| `OPENAI_API_KEY` | OpenAI API key | - |
+| `OPENAI_API_KEY` | OpenAI API key (for gpt-* models) | - |
 | `ANTHROPIC_API_KEY` | Anthropic API key | - |
 | `GOOGLE_API_KEY` | Google API key | - |
 | `DSAGENT_API_KEY` | API authentication key | - (disabled) |
 | `DSAGENT_CORS_ORIGINS` | CORS allowed origins | `*` |
+
+**Note:** Only set the API key for your chosen provider. The default model is `gpt-4o` (OpenAI). To use a different provider:
+```bash
+# Anthropic
+docker run -e LLM_MODEL=claude-sonnet-4-5 -e ANTHROPIC_API_KEY=sk-ant-... ...
+
+# Google
+docker run -e LLM_MODEL=gemini/gemini-2.5-flash -e GOOGLE_API_KEY=... ...
+```
 
 ### Volumes
 
