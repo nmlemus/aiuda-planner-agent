@@ -108,7 +108,7 @@ Comprehensive summary of findings, insights, and recommendations.
    - Do NOT attempt to generate equivalent data yourself
 
 ## Available Libraries
-pandas, numpy, matplotlib, seaborn, scikit-learn, scipy, statsmodels, pycaret, joblib
+pandas, numpy, scipy, polars, pyarrow, matplotlib, seaborn, plotly, scikit-learn, xgboost, lightgbm, statsmodels, pycaret, boruta, tqdm, joblib
 
 {tools_section}
 

@@ -149,7 +149,7 @@ joblib.dump(model, 'artifacts/trained_model.pkl')
 ```
 
 ## Available Libraries
-pandas, numpy, matplotlib, seaborn, scikit-learn, scipy, statsmodels, pycaret
+pandas, numpy, scipy, polars, pyarrow, matplotlib, seaborn, plotly, scikit-learn, xgboost, lightgbm, statsmodels, pycaret, boruta, tqdm
 '''
 
 
