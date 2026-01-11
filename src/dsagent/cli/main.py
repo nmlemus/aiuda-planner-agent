@@ -324,18 +324,26 @@ API Endpoints:
 def main() -> int:
     """Main entry point."""
     parser = create_parser()
-    args = parser.parse_args()
+
+    # Check if we need to default to 'chat' subcommand
+    # This handles cases like: dsagent --model gpt-4o (no subcommand specified)
+    valid_commands = {'chat', 'run', 'init', 'mcp', 'serve'}
+    argv = sys.argv[1:]
+
+    # If no args, or first arg starts with '-', or first arg is not a valid command
+    # then prepend 'chat' as the default subcommand
+    if not argv or argv[0].startswith('-') or argv[0] not in valid_commands:
+        # But skip if it's --version or --help
+        if not argv or argv[0] not in ('--version', '-v', '--help', '-h'):
+            argv = ['chat'] + argv
+
+    args = parser.parse_args(argv)
 
     # Handle --version
     if args.version:
         from dsagent import __version__
         print(f"dsagent {__version__}")
         return 0
-
-    # Default to chat if no command specified
-    if args.command is None:
-        # Re-parse with 'chat' as default
-        args = parser.parse_args(['chat'] + sys.argv[1:])
 
     # Run the command
     if hasattr(args, 'func'):

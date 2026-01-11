@@ -9,7 +9,16 @@ LiteLLM automatically detects the provider from the model name and routes reques
 1. Set the API key for your provider (environment variable)
 2. Specify the model name with `--model`
 
-No additional configuration required for most providers.
+**Provider prefixes:**
+
+| Provider | Prefix Required | Example |
+|----------|-----------------|---------|
+| OpenAI | No | `gpt-4o` |
+| Anthropic | No | `claude-sonnet-4-5` |
+| Google AI Studio | **Yes** | `gemini/gemini-2.5-flash` |
+| DeepSeek | Yes | `deepseek/deepseek-chat` |
+| Ollama | Yes | `ollama/llama3.2` |
+| Azure | Yes | `azure/deployment-name` |
 
 ## Cloud Providers
 
@@ -49,13 +58,15 @@ dsagent run "Your task" --model claude-haiku-4-5
 # Set API key
 export GOOGLE_API_KEY="..."
 
-# Use any Gemini model
-dsagent run "Your task" --model gemini-2.5-pro
-dsagent run "Your task" --model gemini-2.5-flash
-dsagent run "Your task" --model gemini-2.0-flash
+# Use any Gemini model (always use gemini/ prefix)
+dsagent run "Your task" --model gemini/gemini-2.5-pro
+dsagent run "Your task" --model gemini/gemini-2.5-flash
+dsagent run "Your task" --model gemini/gemini-2.0-flash
 ```
 
-**Available models:** `gemini-2.5-pro`, `gemini-2.5-flash`, `gemini-2.0-flash`, `gemini-1.5-pro`
+**Available models:** `gemini/gemini-2.5-pro`, `gemini/gemini-2.5-flash`, `gemini/gemini-2.0-flash`, `gemini/gemini-1.5-pro`
+
+> **Important:** Always use the `gemini/` prefix for Google AI Studio. Without the prefix, LiteLLM routes to Google Vertex AI, which requires different authentication (GCP credentials instead of API key).
 
 ### DeepSeek
 
