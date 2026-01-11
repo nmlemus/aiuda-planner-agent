@@ -36,27 +36,16 @@ jobs:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      - name: Extract version from pyproject.toml
-        id: version
-        run: |
-          VERSION=$(grep -m1 'version = ' pyproject.toml | cut -d'"' -f2)
-          echo "version=$VERSION" >> $GITHUB_OUTPUT
-          echo "Extracted version: $VERSION"
-
       - name: Generate Docker metadata (latest variant)
         id: meta-latest
         uses: docker/metadata-action@v5
         with:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
           tags: |
-            # Set latest tag for main branch
+            # Always set 'latest' tag on main branch push
             type=raw,value=latest,enable={{is_default_branch}}
-            # Version tag from pyproject.toml
-            type=raw,value=${{ steps.version.outputs.version }},enable={{is_default_branch}}
-            # Git tag (v1.0.0 -> 1.0.0)
+            # Version tag only from git tags (v1.0.0 -> 1.0.0)
             type=semver,pattern={{version}}
-            # Branch name for non-main branches
-            type=ref,event=branch,enable=${{ github.ref != 'refs/heads/main' }}
 
       - name: Generate Docker metadata (full variant)
         id: meta-full
@@ -64,11 +53,9 @@ jobs:
         with:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
           tags: |
-            # Set full tag for main branch
+            # Always set 'full' tag on main branch push
             type=raw,value=full,enable={{is_default_branch}}
-            # Version-full tag from pyproject.toml
-            type=raw,value=${{ steps.version.outputs.version }}-full,enable={{is_default_branch}}
-            # Git tag with -full suffix
+            # Version-full tag only from git tags (v1.0.0 -> 1.0.0-full)
             type=semver,pattern={{version}}-full
 
       - name: Build and push (latest - without LaTeX)
