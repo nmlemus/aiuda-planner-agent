@@ -22,7 +22,7 @@ from dsagent.session import SessionManager
 logger = logging.getLogger(__name__)
 
 # API version
-API_VERSION = "0.6.1"
+API_VERSION = "0.6.2"
 
 
 @asynccontextmanager
