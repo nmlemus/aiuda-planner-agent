@@ -57,11 +57,12 @@ dsagent init
 ```
 
 This will:
-- Ask for your LLM provider (OpenAI, Anthropic, local, etc.)
+- Ask for your LLM provider (OpenAI, Anthropic, Google, local, etc.)
 - Store your API key securely in `~/.dsagent/.env`
 - Automatically select a default model based on provider:
   - OpenAI → `gpt-4o`
   - Anthropic → `claude-sonnet-4-5`
+  - Google → `gemini/gemini-2.5-flash`
   - Local → `ollama/llama3`
 - Optionally configure MCP tools (web search, etc.)
 

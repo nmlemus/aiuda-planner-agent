@@ -45,7 +45,7 @@ def run_init(args) -> int:
     console.print("[bold]Step 1: LLM Provider[/bold]")
     provider = Prompt.ask(
         "Select your LLM provider",
-        choices=["openai", "anthropic", "local", "litellm"],
+        choices=["openai", "anthropic", "google", "local", "litellm"],
         default="openai"
     )
 
@@ -60,6 +60,11 @@ def run_init(args) -> int:
         api_key = Prompt.ask("Enter your Anthropic API key", password=True)
         env_lines.append(f"ANTHROPIC_API_KEY={api_key}")
         env_lines.append("LLM_MODEL=claude-sonnet-4-5")
+
+    elif provider == "google":
+        api_key = Prompt.ask("Enter your Google API key", password=True)
+        env_lines.append(f"GOOGLE_API_KEY={api_key}")
+        env_lines.append("LLM_MODEL=gemini/gemini-2.5-flash")
 
     elif provider == "local":
         console.print("Using Ollama for local models")
