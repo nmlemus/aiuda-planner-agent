@@ -46,6 +46,23 @@ cd dsagent
 uv sync --all-extras
 ```
 
+### Docker
+
+```bash
+# Run API server
+docker run -d -p 8000:8000 \
+  -e OPENAI_API_KEY=sk-your-key \
+  nmlemus/dsagent:latest
+
+# Run interactive CLI
+docker run -it \
+  -e OPENAI_API_KEY=sk-your-key \
+  nmlemus/dsagent:latest \
+  dsagent chat
+```
+
+For Docker deployment details, see [docs/DOCKER.md](docs/DOCKER.md).
+
 ## Quick Start
 
 ### 1. Setup (First Time)
@@ -223,12 +240,26 @@ workspace/
     └── logs/           # Execution logs
 ```
 
+## Included Libraries
+
+DSAgent comes with essential data science libraries pre-installed:
+
+| Category | Libraries |
+|----------|-----------|
+| **Core** | numpy, pandas, scipy |
+| **DataFrames** | polars, pyarrow |
+| **Visualization** | matplotlib, seaborn, plotly |
+| **Machine Learning** | scikit-learn, xgboost, lightgbm, pycaret |
+| **Feature Selection** | boruta |
+| **Statistics** | statsmodels |
+
 ## Documentation
 
 - [CLI Reference](docs/CLI.md) - Complete command-line options
 - [Python API](docs/PYTHON_API.md) - Detailed API documentation
 - [Model Configuration](docs/MODELS.md) - LLM provider setup
 - [MCP Tools](docs/MCP.md) - External tools integration
+- [Docker Guide](docs/DOCKER.md) - Container deployment
 
 ## License
 

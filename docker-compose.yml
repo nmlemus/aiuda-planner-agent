@@ -1,0 +1,50 @@
+version: "3.8"
+
+services:
+  dsagent:
+    build: .
+    image: dsagent:latest
+    container_name: dsagent
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./workspace:/workspace
+      - dsagent-config:/home/dsagent/.dsagent
+    environment:
+      # LLM Configuration (set your API key)
+      - LLM_MODEL=${LLM_MODEL:-gpt-4o}
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
+      - GOOGLE_API_KEY=${GOOGLE_API_KEY:-}
+      # API Server Configuration
+      - DSAGENT_API_KEY=${DSAGENT_API_KEY:-}
+      - DSAGENT_CORS_ORIGINS=${DSAGENT_CORS_ORIGINS:-*}
+    restart: unless-stopped
+    # healthcheck:
+    #   test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+    #   interval: 30s
+    #   timeout: 10s
+    #   retries: 3
+    #   start_period: 10s
+
+  # Interactive CLI mode (optional)
+  dsagent-cli:
+    build: .
+    image: dsagent:latest
+    container_name: dsagent-cli
+    stdin_open: true
+    tty: true
+    volumes:
+      - ./workspace:/workspace
+      - dsagent-config:/home/dsagent/.dsagent
+    environment:
+      - LLM_MODEL=${LLM_MODEL:-gpt-4o}
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
+      - GOOGLE_API_KEY=${GOOGLE_API_KEY:-}
+    command: ["dsagent", "chat"]
+    profiles:
+      - cli
+
+volumes:
+  dsagent-config:
