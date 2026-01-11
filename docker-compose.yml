@@ -11,14 +11,44 @@ services:
       - ./workspace:/workspace
       - dsagent-config:/home/dsagent/.dsagent
     environment:
-      # LLM Configuration (set your API key)
+      # ===========================================
+      # LLM Configuration (set your provider's key)
+      # ===========================================
       - LLM_MODEL=${LLM_MODEL:-gpt-4o}
+      # OpenAI
       - OPENAI_API_KEY=${OPENAI_API_KEY:-}
+      # Anthropic
       - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
+      # Google
       - GOOGLE_API_KEY=${GOOGLE_API_KEY:-}
+      # DeepSeek
+      - DEEPSEEK_API_KEY=${DEEPSEEK_API_KEY:-}
+
+      # ===========================================
+      # Custom API Base (for proxies/local models)
+      # ===========================================
+      # - LLM_API_BASE=${LLM_API_BASE:-}
+      # - OLLAMA_API_BASE=${OLLAMA_API_BASE:-http://host.docker.internal:11434}
+
+      # ===========================================
+      # Agent Settings
+      # ===========================================
+      - DSAGENT_MAX_ROUNDS=${DSAGENT_MAX_ROUNDS:-30}
+      - DSAGENT_TEMPERATURE=${DSAGENT_TEMPERATURE:-0.3}
+      - DSAGENT_MAX_TOKENS=${DSAGENT_MAX_TOKENS:-4096}
+      - DSAGENT_CODE_TIMEOUT=${DSAGENT_CODE_TIMEOUT:-300}
+
+      # ===========================================
       # API Server Configuration
+      # ===========================================
       - DSAGENT_API_KEY=${DSAGENT_API_KEY:-}
       - DSAGENT_CORS_ORIGINS=${DSAGENT_CORS_ORIGINS:-*}
+
+      # ===========================================
+      # MCP Tools API Keys (optional)
+      # ===========================================
+      - BRAVE_API_KEY=${BRAVE_API_KEY:-}
+      # - FINANCIAL_DATASETS_API_KEY=${FINANCIAL_DATASETS_API_KEY:-}
     restart: unless-stopped
     # healthcheck:
     #   test: ["CMD", "curl", "-f", "http://localhost:8000/health"]

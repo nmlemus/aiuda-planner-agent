@@ -54,23 +54,77 @@ docker run -it \
 
 ### Environment Variables
 
+#### LLM Configuration
+
 | Variable | Description | Default |
 |----------|-------------|---------|
 | `LLM_MODEL` | LLM model to use | `gpt-4o` |
 | `OPENAI_API_KEY` | OpenAI API key (for gpt-* models) | - |
-| `ANTHROPIC_API_KEY` | Anthropic API key | - |
-| `GOOGLE_API_KEY` | Google API key | - |
+| `ANTHROPIC_API_KEY` | Anthropic API key (for claude-* models) | - |
+| `GOOGLE_API_KEY` | Google API key (for gemini/* models) | - |
+| `DEEPSEEK_API_KEY` | DeepSeek API key | - |
+| `LLM_API_BASE` | Custom API endpoint (for proxies) | - |
+| `OLLAMA_API_BASE` | Ollama API endpoint | `http://host.docker.internal:11434` |
+
+#### Agent Settings
+
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `DSAGENT_MAX_ROUNDS` | Maximum agent iterations | `30` |
+| `DSAGENT_TEMPERATURE` | LLM temperature | `0.3` |
+| `DSAGENT_MAX_TOKENS` | Max tokens per response | `4096` |
+| `DSAGENT_CODE_TIMEOUT` | Code execution timeout (seconds) | `300` |
+
+#### API Server
+
+| Variable | Description | Default |
+|----------|-------------|---------|
 | `DSAGENT_API_KEY` | API authentication key | - (disabled) |
 | `DSAGENT_CORS_ORIGINS` | CORS allowed origins | `*` |
 
-**Note:** Only set the API key for your chosen provider. The default model is `gpt-4o` (OpenAI). To use a different provider:
-```bash
-# Anthropic
-docker run -e LLM_MODEL=claude-sonnet-4-5 -e ANTHROPIC_API_KEY=sk-ant-... ...
+#### MCP Tools (Optional)
 
-# Google
-docker run -e LLM_MODEL=gemini/gemini-2.5-flash -e GOOGLE_API_KEY=... ...
+| Variable | Description |
+|----------|-------------|
+| `BRAVE_API_KEY` | Brave Search API key |
+| `FINANCIAL_DATASETS_API_KEY` | Financial Datasets API key |
+
+### Using a .env File (Recommended)
+
+Create a `.env` file in the same directory as `docker-compose.yml`:
+
+```bash
+# .env
+# LLM Configuration
+LLM_MODEL=gpt-4o
+OPENAI_API_KEY=sk-your-openai-key
+
+# Or for other providers:
+# LLM_MODEL=claude-sonnet-4-5
+# ANTHROPIC_API_KEY=sk-ant-your-key
+
+# Agent Settings (optional)
+DSAGENT_MAX_ROUNDS=30
+DSAGENT_TEMPERATURE=0.3
+
+# API Server (optional)
+DSAGENT_API_KEY=my-secret-api-key
+
+# MCP Tools (optional)
+BRAVE_API_KEY=your-brave-key
 ```
+
+Then start with docker-compose:
+```bash
+docker-compose up -d
+```
+
+Or with docker run:
+```bash
+docker run -d -p 8000:8000 --env-file .env nmlemus/dsagent:latest
+```
+
+**Note:** Only set the API key for your chosen provider.
 
 ### Volumes
 
