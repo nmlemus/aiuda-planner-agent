@@ -1,0 +1,121 @@
+site_name: DSAgent
+site_description: AI-powered autonomous agent for data science tasks
+site_author: DSAgent Contributors
+site_url: https://nmlemus.github.io/dsagent
+
+repo_name: nmlemus/dsagent
+repo_url: https://github.com/nmlemus/dsagent
+edit_uri: edit/main/docs/
+
+theme:
+  name: material
+  language: en
+  palette:
+    # Light mode
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+    # Dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+  font:
+    text: Inter
+    code: JetBrains Mono
+  icon:
+    repo: fontawesome/brands/github
+    logo: material/robot
+  features:
+    - navigation.instant
+    - navigation.tracking
+    - navigation.tabs
+    - navigation.sections
+    - navigation.expand
+    - navigation.top
+    - search.suggest
+    - search.highlight
+    - content.code.copy
+    - content.code.annotate
+    - content.tabs.link
+    - toc.follow
+
+plugins:
+  - search
+  - mkdocstrings:
+      handlers:
+        python:
+          options:
+            show_source: true
+            show_root_heading: true
+            heading_level: 2
+
+markdown_extensions:
+  - pymdownx.highlight:
+      anchor_linenums: true
+      line_spans: __span
+      pygments_lang_class: true
+  - pymdownx.inlinehilite
+  - pymdownx.snippets
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
+  - pymdownx.tabbed:
+      alternate_style: true
+  - pymdownx.tasklist:
+      custom_checkbox: true
+  - pymdownx.emoji:
+      emoji_index: !!python/name:material.extensions.emoji.twemoji
+      emoji_generator: !!python/name:material.extensions.emoji.to_svg
+  - admonition
+  - pymdownx.details
+  - attr_list
+  - md_in_html
+  - tables
+  - toc:
+      permalink: true
+
+extra:
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/nmlemus/dsagent
+    - icon: fontawesome/brands/python
+      link: https://pypi.org/project/datascience-agent/
+    - icon: fontawesome/brands/docker
+      link: https://hub.docker.com/r/nmlemus/dsagent
+  generator: false
+  version:
+    provider: mike
+
+copyright: Copyright &copy; 2024-2025 DSAgent Contributors
+
+nav:
+  - Home: index.md
+  - Getting Started:
+    - Installation: getting-started/installation.md
+    - Quick Start: getting-started/quickstart.md
+    - Configuration: getting-started/configuration.md
+  - User Guide:
+    - CLI Reference: guide/cli.md
+    - Model Configuration: guide/models.md
+    - MCP Tools: guide/mcp.md
+    - Docker Deployment: guide/docker.md
+  - Python API:
+    - Overview: api/overview.md
+    - PlannerAgent: api/planner-agent.md
+    - ConversationalAgent: api/conversational-agent.md
+  - Examples:
+    - Data Analysis: examples/data-analysis.md
+    - Machine Learning: examples/machine-learning.md
+  - Development:
+    - Contributing: development/contributing.md
+    - Architecture: development/architecture.md
